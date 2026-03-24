@@ -250,7 +250,7 @@ cd data-processor
   - проверить, что сообщения действительно приходят в `trades-topic`;
   - проверить `group.id` и `auto.offset.reset` в `data-processor/application.conf`.
 
-## Что улучшить дальше
+## Планы на будущее
 
 - Добавить Flyway/Liquibase миграции для всех таблиц.
 - Добавить единый `docker-compose` для PostgreSQL + 3 сервисов + Kafka.
