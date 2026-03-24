@@ -1,0 +1,8 @@
+// Корневой build: заглушка для IDE (prepareKotlinBuildScriptModel), если задача ещё не создана
+subprojects {
+    afterEvaluate {
+        if (tasks.findByName('prepareKotlinBuildScriptModel') == null) {
+            tasks.register('prepareKotlinBuildScriptModel') {}
+        }
+    }
+}

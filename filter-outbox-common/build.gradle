@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+}
+
+group = 'ru'
+version = '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    koraBom
+    annotationProcessor.extendsFrom(koraBom)
+    compileOnly.extendsFrom(koraBom)
+    implementation.extendsFrom(koraBom)
+}
+
+dependencies {
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    implementation 'org.postgresql:postgresql:42.7.3'
+    implementation platform('ru.tinkoff.kora:kora-parent:1.2.12')
+    implementation 'ru.tinkoff.kora:database-common'
+    implementation "ru.tinkoff.kora:database-jdbc"
+    implementation "ru.tinkoff.kora:json-module"
+
+    koraBom platform('ru.tinkoff.kora:kora-parent:1.2.12')
+    annotationProcessor "ru.tinkoff.kora:annotation-processors"
+    annotationProcessor "org.mapstruct:mapstruct-processor:1.5.5.Final"
+    implementation "org.mapstruct:mapstruct:1.5.5.Final"
+}
+
+test {
+    useJUnitPlatform()
+}

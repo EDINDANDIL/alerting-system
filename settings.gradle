@@ -1,0 +1,4 @@
+rootProject.name = 'alerting-system'
+include 'filter-outbox-common'
+include 'filter-service'
+include 'outbox-sender'
