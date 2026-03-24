@@ -8,8 +8,8 @@ import java.util.Deque;
 public class SlidingWindow {
 
     private final long windowLengthNs;
-    private final Deque<TradePoint> minDeque = new ArrayDeque<>();
-    private final Deque<TradePoint> maxDeque = new ArrayDeque<>();
+    protected final Deque<TradePoint> minDeque = new ArrayDeque<>();
+    protected Deque<TradePoint> maxDeque = new ArrayDeque<>();
 
     public SlidingWindow(long windowLengthNs) {
         this.windowLengthNs = windowLengthNs;
