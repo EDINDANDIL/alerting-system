@@ -6,18 +6,18 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 public class SlidingWindow {
-    private final long windowLengthUs;
+
+    private final long windowLengthNs;
     private final Deque<TradePoint> minDeque = new ArrayDeque<>();
     private final Deque<TradePoint> maxDeque = new ArrayDeque<>();
 
-    public SlidingWindow(long windowLengthUs) {
-        this.windowLengthUs = windowLengthUs;
+    public SlidingWindow(long windowLengthNs) {
+        this.windowLengthNs = windowLengthNs;
     }
 
     public synchronized void add(TradePoint newPoint) {
-        long cutoff = newPoint.timestampNs() - windowLengthUs;
+        long cutoff = newPoint.timestampNs() - windowLengthNs;
 
-        // 1. Удаляем устаревшие элементы из обеих очередей
         while (!minDeque.isEmpty() && minDeque.getFirst().timestampNs() < cutoff) {
             minDeque.removeFirst();
         }
@@ -25,16 +25,11 @@ public class SlidingWindow {
             maxDeque.removeFirst();
         }
 
-        // 2. Обновляем очередь минимумов
-        // Удаляем с конца все элементы, у которых цена >= новой
-        // (они никогда не станут минимумом, пока новая точка в окне)
         while (!minDeque.isEmpty() && minDeque.getLast().priceRaw() >= newPoint.priceRaw()) {
             minDeque.removeLast();
         }
         minDeque.addLast(newPoint);
 
-        // 3. Обновляем очередь максимумов
-        // Удаляем с конца все элементы, у которых цена <= новой
         while (!maxDeque.isEmpty() && maxDeque.getLast().priceRaw() <= newPoint.priceRaw()) {
             maxDeque.removeLast();
         }
@@ -49,14 +44,14 @@ public class SlidingWindow {
         TradePoint min = minDeque.getFirst();
         TradePoint max = maxDeque.getFirst();
 
-        // Проверяем, что элементы еще актуальны (на всякий случай)
-        long currentTime = Math.max(min.timestampNs(), max.timestampNs());
-        long cutoff = currentTime - windowLengthUs;
-
-        if (min.timestampNs() < cutoff || max.timestampNs() < cutoff) {
+        if (min.priceRaw() == 0L) {
             return 0.0;
         }
 
-        return (double) (max.priceRaw() - min.priceRaw()) / min.priceRaw();
+        double abs = (double) (max.priceRaw() - min.priceRaw()) / min.priceRaw();
+
+        if (max.timestampNs() > min.timestampNs()) return abs;   // UP
+        if (max.timestampNs() < min.timestampNs()) return -abs;  // DOWN
+        return 0.0;
     }
 }

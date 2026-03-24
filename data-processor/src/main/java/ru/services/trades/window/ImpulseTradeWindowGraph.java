@@ -27,6 +27,7 @@ public final class ImpulseTradeWindowGraph {
     private final ImpulseTradesSection impulseTradesSection;
     private final AlertPublisher alertPublisher;
 
+    // {монета:{окно: очередь событий}}
     private final ConcurrentHashMap<String, ConcurrentHashMap<Long, SlidingWindow>> bySymbol =
             new ConcurrentHashMap<>();
 
@@ -36,49 +37,41 @@ public final class ImpulseTradeWindowGraph {
     }
 
     public void onTrade(TradeEvent event) {
+
         List<ImpulseFilterView> active = impulseTradesSection.activeImpulseFilters();
+
         if (active.isEmpty()) return;
 
-        var matching = active.stream()
+        var table = active.stream()
                 .filter(f -> matchesInstrument(f, event))
-                .toList();
-        if (matching.isEmpty()) return;
-
-        var point = new TradePoint(event.timestampNs(), event.price());
-        var byTimeWindowSec = matching.stream()
                 .collect(Collectors.groupingBy(f -> f.payload().timeWindow()));
 
-        for (var e : byTimeWindowSec.entrySet()) {
-            int timeWindowSec = e.getKey();
-            long windowLengthNs = timeWindowSec * 1_000_000_000L;
-            SlidingWindow window = windowFor(event.symbol(), windowLengthNs);
+        if (table.isEmpty()) return;
 
-            double phiPercent;
-            synchronized (window) {
-                window.add(point);
-                phiPercent = window.getCurrentImpulsePercent() * 100.0;
-            }
+        var point = new TradePoint(event.timestampNs(), event.price());
 
-            for (ImpulseFilterView filter : e.getValue()) {
-                if (phiPercent < filter.payload().percent()) {
-                    continue;
-                }
-                // TODO: Direction UP/DOWN/BOTH по динамике цены
-                for (Integer userId : filter.subscribers()) {
-                    alertPublisher.sendAsync(
-                            event.symbol(),
-                            new AlertEvent("IMPULSE filter=" + filter.filterId()
-                                           + " user=" + userId
-                                           + " symbol=" + event.symbol()
-                                           + " phi=" + String.format("%.4f", phiPercent) + "%")
-                    );
+        table.forEach((time, filters) -> {
 
-                    log.info("Обработали {}", userId);
-                }
-            }
-        }
+            SlidingWindow window = windowFor(event.symbol(), time * 1_000_000_000L);
+            double delta;
+
+            window.add(point);
+            delta = window.getCurrentImpulsePercent();
+
+            filters.stream().filter(f -> trigger(delta, f))
+                    .forEach(f -> {
+                        f.subscribers().forEach(id -> {
+                            alertPublisher.sendAsync(
+                                    event.symbol(),
+                                    new AlertEvent(f.filterId(), id, f.payload())
+                            );
+                            log.info("Обработали {}", id);
+                        });
+                    });
+        });
     }
 
+    // Вызов конкретного окна с конкретным значением времени
     private SlidingWindow windowFor(String symbol, long windowLengthNs) {
         return bySymbol
                 .computeIfAbsent(symbol, s -> new ConcurrentHashMap<>())
@@ -94,5 +87,15 @@ public final class ImpulseTradeWindowGraph {
             return false;
         }
         return p.market() == null || p.market().stream().anyMatch(m -> m.equalsIgnoreCase(e.market()));
+    }
+
+    private boolean trigger(double delta, ImpulseFilterView filter) {
+
+        double threshold = filter.payload().percent() / 100.0;
+        return switch (filter.payload().direction()) {
+            case UP -> delta >= threshold; // TODO percent -> coef
+            case DOWN -> delta <= -threshold;
+            case BOTH ->  Math.abs(delta) >= threshold;
+        };
     }
 }
