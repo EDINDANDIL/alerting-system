@@ -36,17 +36,41 @@ public class SlidingWindow {
         maxDeque.addLast(newPoint);
     }
 
+    /**
+     * Вычисляет текущий «импульс» в окне как подписанный коэффициент (это НЕ проценты).
+     *
+     * <p>Модуль импульса считается по формуле:
+     * <pre>
+     * (maxPriceRaw - minPriceRaw) / minPriceRaw
+     * </pre>
+     * где {@code maxPriceRaw} и {@code minPriceRaw} — текущие экстремумы цены в скользящем окне
+     * (берутся из монотонных деков).
+     *
+     * <p>Знак результата:
+     * <ul>
+     *   <li>Положительный (UP), если максимум по времени позже минимума.</li>
+     *   <li>Отрицательный (DOWN), если максимум по времени раньше минимума.</li>
+     *   <li>{@code 0.0}, если данных недостаточно, окно пустое, {@code minPriceRaw == 0}
+     *       или у min/max одинаковый {@code timestampNs}.</li>
+     * </ul>
+     *
+     * <p>Единицы измерения:
+     * <ul>
+     *   <li>Возвращается безразмерный коэффициент: например {@code 0.10} = 10%.</li>
+     *   <li>Чтобы получить проценты, умножьте результат на {@code 100}.</li>
+     * </ul>
+     *
+     * <p>Потокобезопасность: метод синхронизирован.
+     *
+     * @return подписанный коэффициент импульса; {@code 0.0}, если импульс нельзя корректно посчитать
+     */
     public synchronized double getCurrentImpulsePercent() {
-        if (minDeque.isEmpty() || maxDeque.isEmpty()) {
-            return 0.0;
-        }
+        if (minDeque.isEmpty() || maxDeque.isEmpty()) return 0.0;
 
         TradePoint min = minDeque.getFirst();
         TradePoint max = maxDeque.getFirst();
 
-        if (min.priceRaw() == 0L) {
-            return 0.0;
-        }
+        if (min.priceRaw() == 0L) return 0.0;
 
         double abs = (double) (max.priceRaw() - min.priceRaw()) / min.priceRaw();
 

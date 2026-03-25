@@ -81,12 +81,12 @@ class ImpulseTradesSectionExtendedTest {
         var section = new ImpulseTradesSection();
         long filterId = 13;
         section.apply(event(OutboxOperation.CREATE, filterId, 1,
-                impulsePayloadWithPercent(Direction.UP, 5)));
+                impulsePayloadWithPercent(5)));
         section.apply(event(OutboxOperation.SUBSCRIBE, filterId, 1, null));
         assertEquals(5, section.activeImpulseFilters().getFirst().payload().percent());
 
         section.apply(event(OutboxOperation.CREATE, filterId, 1,
-                impulsePayloadWithPercent(Direction.UP, 9)));
+                impulsePayloadWithPercent(9)));
 
         assertTrue(section.activeImpulseFilters().isEmpty());
         var state = section.get(new FilterKey(ACTION, filterId));
@@ -120,13 +120,13 @@ class ImpulseTradesSectionExtendedTest {
         );
     }
 
-    private static OutboxPayload.ImpulseFilter impulsePayloadWithPercent(Direction d, int percent) {
+    private static OutboxPayload.ImpulseFilter impulsePayloadWithPercent(int percent) {
         return new OutboxPayload.ImpulseFilter(
                 List.of("binance"),
                 List.of("futures"),
                 List.of(),
                 60,
-                d,
+                Direction.UP,
                 percent,
                 0
         );

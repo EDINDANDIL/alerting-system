@@ -1,7 +1,5 @@
 package ru.controller;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ru.models.dto.Request;
 import ru.models.exceptions.FilterNotFoundException;
 import ru.models.exceptions.UserNotFoundException;
@@ -23,7 +21,6 @@ import java.util.Objects;
 public class FilterController {
 
     private final FilterServiceRegistry filterServiceRegistry;
-    private static final Logger log = LoggerFactory.getLogger(FilterController.class);
 
     public FilterController(FilterServiceRegistry filterServiceRegistry) {
         this.filterServiceRegistry = filterServiceRegistry;

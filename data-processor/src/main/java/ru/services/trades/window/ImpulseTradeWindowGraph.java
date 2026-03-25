@@ -1,5 +1,6 @@
 package ru.services.trades.window;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.core.trades.TradePoint;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 
 /**
  * Валюта (symbol) → окна по длине L (нс) → {@link SlidingWindow}.
- * Фильтры с одинаковым {@code timeWindow} делят одно окно на символ.
+ * Фильтры с одинаковым {@code timeWindowNs} делят одно окно на символ.
  */
 @Component
 public final class ImpulseTradeWindowGraph {
@@ -44,12 +45,13 @@ public final class ImpulseTradeWindowGraph {
 
         var table = active.stream()
                 .filter(f -> matchesInstrument(f, event))
-                .collect(Collectors.groupingBy(f -> f.payload().timeWindow()));
+                .collect(Collectors.groupingBy(f -> f.payload().timeWindowNs()));
 
         if (table.isEmpty()) return;
 
         var point = new TradePoint(event.timestampNs(), event.price());
 
+        // время в секундах, нужны наносекунды
         table.forEach((time, filters) -> {
 
             SlidingWindow window = windowFor(event.symbol(), time * 1_000_000_000L);
@@ -59,15 +61,20 @@ public final class ImpulseTradeWindowGraph {
             delta = window.getCurrentImpulsePercent();
 
             filters.stream().filter(f -> trigger(delta, f))
-                    .forEach(f -> {
-                        f.subscribers().forEach(id -> {
-                            alertPublisher.sendAsync(
-                                    event.symbol(),
-                                    new AlertEvent(f.filterId(), id, f.payload())
-                            );
-                            log.info("Обработали {}", id);
-                        });
-                    });
+                    .forEach(f -> f.subscribers().forEach(id -> alertPublisher.send(new ProducerRecord<>(
+                            "alert-topic",
+                            event.symbol(),
+                            new AlertEvent(f.filterId(), id, f.payload())))
+                            .whenComplete((meta, ex) -> {
+                                if (ex != null) {
+                                    log.error("ALERT send failed: symbol={}, filterId={}, userId={}",
+                                            event.symbol(), f.filterId(), id, ex);
+                                } else {
+                                    log.info("ALERT sent: symbol={}, filterId={}, userId={}, topic={}, partition={}, offset={}",
+                                            event.symbol(), f.filterId(), id,
+                                            meta.topic(), meta.partition(), meta.offset());
+                                }
+                            })));
         });
     }
 
@@ -92,6 +99,7 @@ public final class ImpulseTradeWindowGraph {
     private boolean trigger(double delta, ImpulseFilterView filter) {
 
         double threshold = filter.payload().percent() / 100.0;
+
         return switch (filter.payload().direction()) {
             case UP -> delta >= threshold; // TODO percent -> coef
             case DOWN -> delta <= -threshold;

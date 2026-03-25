@@ -1,5 +1,6 @@
 package ru.services.trades.window;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -14,15 +15,12 @@ import ru.models.dto.TradeEvent;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.*;
 
 class ImpulseTradeWindowGraphFilterTest {
 
@@ -38,6 +36,10 @@ class ImpulseTradeWindowGraphFilterTest {
     void setUp() {
         section = new ImpulseTradesSection();
         alerts = mock(AlertPublisher.class);
+
+        // Важно: send(...).whenComplete(...) в коде graph не должен падать на null
+        when(alerts.send(any())).thenReturn(CompletableFuture.completedFuture(null));
+
         graph = new ImpulseTradeWindowGraph(section, alerts);
     }
 
@@ -48,10 +50,12 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade(1_000L, 100L));
         graph.onTrade(trade(2_000L, 120L));
 
-        var cap = ArgumentCaptor.forClass(AlertEvent.class);
-        verify(alerts).sendAsync(eq(SYM), cap.capture());
+        var records = captureSentRecords();
+        var record = records.getFirst();
 
-        AlertEvent sent = cap.getValue();
+        assertEquals(SYM, record.key());
+
+        AlertEvent sent = record.value();
         assertEquals(1L, sent.filterId());
         assertEquals(100, sent.userId());
         var impulsePayload = assertInstanceOf(OutboxPayload.ImpulseFilter.class, sent.payload());
@@ -75,7 +79,7 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade(1_000L, 100L));
         graph.onTrade(trade(2_000L, 110L));
 
-        verify(alerts, times(1)).sendAsync(eq(SYM), any(AlertEvent.class));
+        verify(alerts, times(1)).send(any());
     }
 
     @Test
@@ -85,7 +89,7 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade(1_000L, 100L));
         graph.onTrade(trade(2_000L, 80L));
 
-        verify(alerts, times(1)).sendAsync(eq(SYM), any(AlertEvent.class));
+        verify(alerts, times(1)).send(any());
     }
 
     @Test
@@ -95,7 +99,7 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade(1_000L, 100L));
         graph.onTrade(trade(2_000L, 80L));
 
-        verify(alerts, times(1)).sendAsync(eq(SYM), any(AlertEvent.class));
+        verify(alerts, times(1)).send(any());
     }
 
     @Test
@@ -156,7 +160,7 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade(1_000L, 100L));
         graph.onTrade(trade(2_000L, 120L));
 
-        verify(alerts, times(2)).sendAsync(eq(SYM), any(AlertEvent.class));
+        verify(alerts, times(2)).send(any());
     }
 
     @Test
@@ -167,10 +171,9 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade(1_000L, 100L));
         graph.onTrade(trade(2_000L, 112L));
 
-        var cap = ArgumentCaptor.forClass(AlertEvent.class);
-        verify(alerts, times(1)).sendAsync(eq(SYM), cap.capture());
+        var records = captureSentRecords();
+        var sent = records.getFirst().value();
 
-        AlertEvent sent = cap.getValue();
         assertEquals(2L, sent.filterId());
         var impulsePayload = assertInstanceOf(OutboxPayload.ImpulseFilter.class, sent.payload());
         assertEquals(10, impulsePayload.percent());
@@ -184,7 +187,7 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade(1_000L, 100L));
         graph.onTrade(trade(2_000L, 120L));
 
-        verify(alerts, times(2)).sendAsync(eq(SYM), any(AlertEvent.class));
+        verify(alerts, times(2)).send(any());
     }
 
     @Test
@@ -195,10 +198,9 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade(1_000L, 100L));
         graph.onTrade(trade(2_000L, 120L));
 
-        verify(alerts, times(2)).sendAsync(eq(SYM), any(AlertEvent.class));
+        verify(alerts, times(2)).send(any());
     }
 
-    /** Фильтр по символу только через blackList: ethusdt не в списке → импульс 100→200 даёт алерт. */
     @Test
     void otherSymbol_notBlackListed_triggersWithSameFilterRule() {
         register(1L, 1, impulse(List.of(), 60, Direction.UP, 5));
@@ -206,7 +208,8 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade("ethusdt", 1_000L, 100L));
         graph.onTrade(trade("ethusdt", 2_000L, 200L));
 
-        verify(alerts, times(1)).sendAsync(eq("ethusdt"), any(AlertEvent.class));
+        var records = captureSentRecords();
+        assertEquals("ethusdt", records.getFirst().key());
     }
 
     @Test
@@ -217,6 +220,14 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade("ethusdt", 2_000L, 200L));
 
         verifyNoInteractions(alerts);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private List<ProducerRecord<String, AlertEvent>> captureSentRecords() {
+        ArgumentCaptor<ProducerRecord<String, AlertEvent>> cap =
+                ArgumentCaptor.forClass((Class) ProducerRecord.class);
+        verify(alerts, times(1)).send(cap.capture());
+        return cap.getAllValues();
     }
 
     private void register(long filterId, int userId, OutboxPayload.ImpulseFilter payload) {
@@ -257,7 +268,7 @@ class ImpulseTradeWindowGraphFilterTest {
             Direction direction,
             int percent
     ) {
-        return impulse(List.of(EX), List.of(ImpulseTradeWindowGraphFilterTest.MK), blackList, timeWindowSec, direction, percent);
+        return impulse(List.of(EX), List.of(MK), blackList, timeWindowSec, direction, percent);
     }
 
     private TradeEvent trade(long tsNs, long priceRaw) {
