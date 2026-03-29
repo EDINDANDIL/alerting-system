@@ -144,7 +144,7 @@ gradle :alert-service:run
 │                            ▼                                           │
 │                     ┌─────────────┐                                    │
 │                     │ Tiger Trade │                                    │
-│                     │(опционально)│                                    │
+│                     │             │                                    │
 │                     └─────────────┘                                    │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -254,9 +254,9 @@ Content-Type: application/json
 
 | Топик | Назначение | Партиции | Retention |
 |-------|------------|----------|-----------|
-| `trades-topic` | Входящие трейды (JSON `TradeEvent`) | 32 | 7 дней |
-| `filter-topic` | События фильтров (CREATE, SUBSCRIBE, UNSUBSCRIBE, DELETE) | 8 | 7 дней |
-| `alert-topic` | Алерты для доставки клиентам | 8 | 1 день |
+| `trades-topic` | Входящие трейды (JSON `TradeEvent`) | 32 | 7 дней    |
+| `filter-topic` | События фильтров (CREATE, SUBSCRIBE, UNSUBSCRIBE, DELETE) | 8 | 7 дней    |
+| `alert-topic` | Алерты для доставки клиентам | 8 | 10 ms     |
 
 **Ключ партиции для `trades-topic`:** `exchange|market|symbol`
 
@@ -353,10 +353,6 @@ gradle :alert-service:test
 - Проверить статус: `docker compose ps`
 - Проверить логи: `docker compose logs <service-name>`
 - Проверить занятость портов: `netstat -ano | findstr :8081`
-
-### Java версия
-- Проверить: `java -version` (требуется Java 25)
-- Если показывает Java 8 — удалить Oracle Java 8 из PATH
 
 ---
 
