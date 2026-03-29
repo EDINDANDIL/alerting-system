@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'ru'
+version = '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+repositories {
+    mavenCentral()
+}
+
+application {
+    mainClass = 'ru.alertcli.CliApplication'
+}
+
+// Fat JAR для запуска через java -jar
+tasks.register('fatJar', Jar) {
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    manifest {
+        attributes 'Main-Class': 'ru.alertcli.CliApplication'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveClassifier = 'fat'
+}
+
+build.dependsOn fatJar
+
+// Интерактивный запуск (с stdin/stdout)
+tasks.register('runInteractive', JavaExec) {
+    dependsOn classes
+    mainClass = application.mainClass
+    classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
+    jvmArgs = ['-Dfile.encoding=UTF-8']
+}
+
+dependencies {
+    // CLI framework
+    implementation 'info.picocli:picocli:4.7.5'
+    annotationProcessor 'info.picocli:picocli-codegen:4.7.5'
+
+    // JLine для readline (история, автодополнение)
+    implementation 'org.jline:jline:3.24.0'
+
+    // WebSocket клиент (Tyrus - референсная реализация JSR 356)
+    implementation 'org.glassfish.tyrus.bundles:tyrus-standalone-client:2.1.0'
+
+    // JSON (Jackson)
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+
+    // Логирование
+    implementation 'ch.qos.logback:logback-classic:1.4.8'
+    implementation 'org.slf4j:slf4j-api:2.0.9'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+}
+
+test {
+    useJUnitPlatform()
+}

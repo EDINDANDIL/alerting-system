@@ -7,7 +7,7 @@ java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
 }
-// FIlTER SERVICE
+
 group = 'ru'
 version = '1.0-SNAPSHOT'
 
@@ -16,8 +16,24 @@ repositories {
 }
 
 application {
-    mainClass = "ru.Application"
+    mainClass = 'ru.Application'
 }
+
+// Создаём fat jar для Kora
+tasks.register('fatJar', Jar) {
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    manifest {
+        attributes 'Main-Class': 'ru.Application'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveClassifier = 'fat'
+}
+
+build.dependsOn fatJar
 
 configurations {
     koraBom
@@ -45,6 +61,10 @@ dependencies {
     implementation "org.postgresql:postgresql:42.7.3"
     implementation "ru.tinkoff.kora:logging-logback"
     implementation "ru.tinkoff.kora:jackson-module"
+    
+    // Flyway для миграций БД
+    implementation "org.flywaydb:flyway-core:10.17.0"
+    implementation "org.flywaydb:flyway-database-postgresql:10.17.0"
 }
 
 test {

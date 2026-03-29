@@ -23,7 +23,7 @@ public final class EventsConsumer {
     @KafkaListener("kafka.eventConsume")
     void handle(String key, @Json OutboxCreatedEvent event, @Log.off Exception exception) {
         if (exception != null) {
-            log.warn("Ошибка пришла");
+            log.warn("Ошибка {}", exception.getMessage());
             return;
         }
 

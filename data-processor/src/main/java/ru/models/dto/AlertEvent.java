@@ -1,12 +1,15 @@
 package ru.models.dto;
 
-import jakarta.annotation.Nullable;
-import ru.common.dto.OutboxPayload;
 import ru.tinkoff.kora.json.common.annotation.Json;
+
+import java.util.List;
+import java.util.Set;
 
 @Json
 public record AlertEvent(
-        long filterId,
-        int userId,
-        @Nullable OutboxPayload payload
+        Set<Integer> subscribers,
+        List<String> exchange,
+        List<String> market,
+        String symbol,
+        long timestampNs
 ) {};

@@ -11,13 +11,29 @@ repositories {
 }
 
 application {
-    mainClass = "ru.Application"
+    mainClass = 'ru.Application'
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
 }
+
+// Создаём fat jar для Kora
+tasks.register('fatJar', Jar) {
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    manifest {
+        attributes 'Main-Class': 'ru.Application'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveClassifier = 'fat'
+}
+
+build.dependsOn fatJar
 
 configurations {
     koraBom
@@ -30,6 +46,7 @@ configurations {
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params'
     testImplementation "ru.tinkoff.kora:test-junit5"
     testImplementation "org.mockito:mockito-core:5.18.0"
     koraBom platform("ru.tinkoff.kora:kora-parent:1.2.12")

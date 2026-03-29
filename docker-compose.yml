@@ -1,0 +1,307 @@
+# Alerting System - полный стек для локальной разработки
+# Запуск: docker compose up --build
+# Остановка: docker compose down
+# Остановка с очисткой данных: docker compose down -v
+#
+# Сервисы:
+#   - PostgreSQL: localhost:5432 (filter_db / filter / filter)
+#   - Kafka: localhost:9092, localhost:9094, localhost:9096
+#   - filter-service: localhost:8081 (HTTP API)
+#   - outbox-sender: localhost:9099
+#   - data-processor: localhost:8082
+#   - alert-service: localhost:8090 (HTTP), localhost:7818 (WebSocket)
+#   - client-desktop: запуск отдельно через gradle
+
+services:
+  # ===========================================
+  # БАЗА ДАННЫХ
+  # ===========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: alerting-postgres
+    environment:
+      POSTGRES_DB: filter_db
+      POSTGRES_USER: filter
+      POSTGRES_PASSWORD: filter
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U filter -d filter_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - alerting-network
+
+  # ===========================================
+  # KAFKA CLUSTER
+  # ===========================================
+  kafka1:
+    image: apache/kafka:3.9.1
+    container_name: kafka1
+    ports:
+      - "9092:19092"
+      - "9093:9093"
+    environment:
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 8
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_KRAFT_CLUSTER_ID: "DqqvGAQURkej_lZD0qN_vA"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:19092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:9092,EXTERNAL://localhost:9092,CONTROLLER://kafka1:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG4J_LOGGERS: "kafka.cluster=WARN,kafka.controller=WARN,state.change.logger=WARN"
+      KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+    volumes:
+      - kafka1_data:/var/lib/kafka/data
+    networks:
+      - alerting-network
+    healthcheck:
+      test: ["CMD", "test", "-f", "/var/lib/kafka/data/meta.properties"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  kafka2:
+    image: apache/kafka:3.9.1
+    container_name: kafka2
+    ports:
+      - "9094:19092"
+      - "9095:9093"
+    environment:
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 8
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_KRAFT_CLUSTER_ID: "DqqvGAQURkej_lZD0qN_vA"
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:19092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka2:9092,EXTERNAL://localhost:9094,CONTROLLER://kafka2:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093,3@kafka3:9093'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG4J_LOGGERS: "kafka.cluster=WARN,kafka.controller=WARN,state.change.logger=WARN"
+      KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+    volumes:
+      - kafka2_data:/var/lib/kafka/data
+    networks:
+      - alerting-network
+    healthcheck:
+      test: ["CMD", "test", "-f", "/var/lib/kafka/data/meta.properties"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  kafka3:
+    image: apache/kafka:3.9.1
+    container_name: kafka3
+    ports:
+      - "9096:19092"
+      - "9097:9093"
+    environment:
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 8
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_KRAFT_CLUSTER_ID: "DqqvGAQURkej_lZD0qN_vA"
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:19092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka3:9092,EXTERNAL://localhost:9096,CONTROLLER://kafka3:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093,3@kafka3:9093'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG4J_LOGGERS: "kafka.cluster=WARN,kafka.controller=WARN,state.change.logger=WARN"
+      KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+    volumes:
+      - kafka3_data:/var/lib/kafka/data
+    networks:
+      - alerting-network
+    healthcheck:
+      test: ["CMD", "test", "-f", "/var/lib/kafka/data/meta.properties"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Инициализация топиков Kafka
+  kafka-init:
+    image: apache/kafka:3.9.1
+    container_name: kafka-init
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+      kafka3:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        echo 'Создание топиков Kafka...'
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server kafka1:9092 --topic trades-topic --partitions 32 --replication-factor 1 --config retention.ms=10
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server kafka1:9092 --topic filter-topic --partitions 8 --replication-factor 1 --config retention.ms=604800000
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server kafka1:9092 --topic alert-topic --partitions 8 --replication-factor 1 --config retention.ms=86400000
+        echo 'Топики созданы!'
+        /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server kafka1:9092
+      "
+    networks:
+      - alerting-network
+
+  # ===========================================
+  # JAVA СЕРВИСЫ
+  # ===========================================
+  
+  # Filter Service - HTTP API для управления фильтрами
+  filter-service:
+    build:
+      context: .
+      dockerfile: filter-service/Dockerfile
+    container_name: alerting-filter-service
+    ports:
+      - "8081:8081"
+      - "8086:8086"
+    environment:
+      DB_URL: "jdbc:postgresql://postgres:5432/filter_db"
+      DB_USERNAME: filter
+      DB_PASSWORD: filter
+      KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
+      KORA_CONFIG_APPLICATION: "application-docker.conf"
+      JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka1:
+        condition: service_healthy
+    networks:
+      - alerting-network
+    restart: unless-stopped
+
+  # Outbox Sender - отправка событий из outbox в Kafka
+  outbox-sender:
+    build:
+      context: .
+      dockerfile: outbox-sender/Dockerfile
+    container_name: alerting-outbox-sender
+    ports:
+      - "9099:9099"
+      - "9089:9089"
+    environment:
+      DB_URL: "jdbc:postgresql://postgres:5432/filter_db"
+      DB_USERNAME: filter
+      DB_PASSWORD: filter
+      KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
+      KORA_CONFIG_APPLICATION: "application-docker.conf"
+      JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka1:
+        condition: service_healthy
+      filter-service:
+        condition: service_started
+    networks:
+      - alerting-network
+    restart: unless-stopped
+
+  # Data Processor - потоковая обработка трейдов
+  data-processor:
+    build:
+      context: .
+      dockerfile: data-processor/Dockerfile
+    container_name: alerting-data-processor
+    ports:
+      - "8082:8082"
+      - "8087:8087"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
+      KORA_CONFIG_APPLICATION: "application-docker.conf"
+      JAVA_TOOL_OPTIONS: "-Xmx768m -Xms512m"
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - alerting-network
+    restart: unless-stopped
+
+  # Alert Service - WebSocket сервер для доставки алертов
+  alert-service:
+    build:
+      context: .
+      dockerfile: alert-service/Dockerfile
+    container_name: alerting-alert-service
+    ports:
+      - "8090:8090"
+      - "7818:7818"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
+      KORA_CONFIG_APPLICATION: "application-docker.conf"
+      JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - alerting-network
+    restart: unless-stopped
+
+networks:
+  alerting-network:
+    name: alerting-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: alerting-postgres-data
+  kafka1_data:
+    name: alerting-kafka1-data
+  kafka2_data:
+    name: alerting-kafka2-data
+  kafka3_data:
+    name: alerting-kafka3-data

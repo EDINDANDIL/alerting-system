@@ -1,7 +1,5 @@
 package ru.kafka.listeners;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ru.models.dto.TradeEvent;
 import ru.services.trades.TradesProcessor;
 import ru.tinkoff.kora.common.Component;
@@ -13,7 +11,6 @@ import ru.tinkoff.kora.logging.common.annotation.Log;
 public class TradesListener {
 
     private final TradesProcessor tradesProcessor;
-    private final Logger log = LoggerFactory.getLogger(TradesListener.class);
 
     public TradesListener(TradesProcessor tradesProcessor) {
         this.tradesProcessor = tradesProcessor;

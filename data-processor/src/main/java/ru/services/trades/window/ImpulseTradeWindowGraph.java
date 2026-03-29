@@ -17,8 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Валюта (symbol) → окна по длине L (нс) → {@link SlidingWindow}.
- * Фильтры с одинаковым {@code timeWindowNs} делят одно окно на символ.
+ * Валюта (symbol) → окна по длине L (с) → {@link SlidingWindow}.
+ * Фильтры с одинаковым {@code timeWindow} делят одно окно на символ.
  */
 @Component
 public final class ImpulseTradeWindowGraph {
@@ -45,7 +45,7 @@ public final class ImpulseTradeWindowGraph {
 
         var table = active.stream()
                 .filter(f -> matchesInstrument(f, event))
-                .collect(Collectors.groupingBy(f -> f.payload().timeWindowNs()));
+                .collect(Collectors.groupingBy(f -> f.payload().timeWindow()));
 
         if (table.isEmpty()) return;
 
@@ -61,10 +61,17 @@ public final class ImpulseTradeWindowGraph {
             delta = window.getCurrentImpulsePercent();
 
             filters.stream().filter(f -> trigger(delta, f))
-                    .forEach(f -> f.subscribers().forEach(id -> alertPublisher.send(new ProducerRecord<>(
-                            "alert-topic",
-                            event.symbol(),
-                            new AlertEvent(f.filterId(), id, f.payload())))
+                    .forEach(f -> f.subscribers().forEach(id -> alertPublisher.send(
+                            new ProducerRecord<>(
+                            // ключ для порядка этого фильтра этой монеты (!= порядок по монете глобально)
+                            "alert-topic", f.filterId()+":"+event.symbol(), new AlertEvent(
+                                    f.subscribers(), // <- уменьшаем кол-во сообщений кратно
+                                    f.payload().exchange(),
+                                    f.payload().market(),
+                                    event.symbol(),
+                                    event.timestampNs()
+                                    )
+                            ))
                             .whenComplete((meta, ex) -> {
                                 if (ex != null) {
                                     log.error("ALERT send failed: symbol={}, filterId={}, userId={}",

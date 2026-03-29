@@ -46,6 +46,7 @@ public class KafkaService {
                         key,
                         event
                 );
+                log.info("event={}", event);
                 record.headers().add("event-id", Long.toString(id).getBytes(StandardCharsets.UTF_8));
                 try {
                     publisher.send(record).orTimeout(10, TimeUnit.SECONDS).join();

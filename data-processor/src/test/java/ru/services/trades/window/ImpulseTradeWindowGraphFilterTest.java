@@ -15,6 +15,7 @@ import ru.models.dto.TradeEvent;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,13 +54,13 @@ class ImpulseTradeWindowGraphFilterTest {
         var records = captureSentRecords();
         var record = records.getFirst();
 
-        assertEquals(SYM, record.key());
+        assertEquals("1:" + SYM, record.key());
 
         AlertEvent sent = record.value();
-        assertEquals(1L, sent.filterId());
-        assertEquals(100, sent.userId());
-        var impulsePayload = assertInstanceOf(OutboxPayload.ImpulseFilter.class, sent.payload());
-        assertEquals(10, impulsePayload.percent());
+        assertEquals(Set.of(100), sent.subscribers());
+        assertEquals(List.of(EX), sent.exchange());
+        assertEquals(List.of(MK), sent.market());
+        assertEquals(SYM, sent.symbol());
     }
 
     @Test
@@ -174,9 +175,7 @@ class ImpulseTradeWindowGraphFilterTest {
         var records = captureSentRecords();
         var sent = records.getFirst().value();
 
-        assertEquals(2L, sent.filterId());
-        var impulsePayload = assertInstanceOf(OutboxPayload.ImpulseFilter.class, sent.payload());
-        assertEquals(10, impulsePayload.percent());
+        assertEquals(Set.of(1), sent.subscribers());
     }
 
     @Test
@@ -209,7 +208,7 @@ class ImpulseTradeWindowGraphFilterTest {
         graph.onTrade(trade("ethusdt", 2_000L, 200L));
 
         var records = captureSentRecords();
-        assertEquals("ethusdt", records.getFirst().key());
+        assertEquals("1:ethusdt", records.getFirst().key());
     }
 
     @Test
@@ -226,7 +225,7 @@ class ImpulseTradeWindowGraphFilterTest {
     private List<ProducerRecord<String, AlertEvent>> captureSentRecords() {
         ArgumentCaptor<ProducerRecord<String, AlertEvent>> cap =
                 ArgumentCaptor.forClass((Class) ProducerRecord.class);
-        verify(alerts, times(1)).send(cap.capture());
+        verify(alerts, atLeastOnce()).send(cap.capture());
         return cap.getAllValues();
     }
 

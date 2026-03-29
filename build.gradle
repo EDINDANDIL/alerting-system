@@ -1,8 +1,31 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
 // Корневой build: заглушка для IDE (prepareKotlinBuildScriptModel), если задача ещё не создана
 subprojects {
     afterEvaluate {
         if (tasks.findByName('prepareKotlinBuildScriptModel') == null) {
             tasks.register('prepareKotlinBuildScriptModel') {}
         }
+    }
+}
+
+// Общая конфигурация для всех подпроектов
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'application'
+    
+    // Переопределяем task jar для создания fat jar
+    jar {
+        manifest {
+            attributes 'Main-Class': application.mainClass
+        }
+        from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        }
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        archiveClassifier = 'all'
     }
 }

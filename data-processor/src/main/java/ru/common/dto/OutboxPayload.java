@@ -17,7 +17,7 @@ public sealed interface OutboxPayload {
             List<String> exchange,
             List<String> market,
             List<String> blackList,
-            int timeWindowNs,
+            int timeWindow,
             Direction direction,
             int percent,
             int volume24h

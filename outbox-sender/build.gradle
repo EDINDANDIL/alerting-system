@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id "application"
 }
-// SENDER
+
 group = 'ru'
 version = '1.0-SNAPSHOT'
 
@@ -16,8 +16,24 @@ java {
 }
 
 application {
-    mainClass = "ru.Application"
+    mainClass = 'ru.Application'
 }
+
+// Создаём fat jar для Kora
+tasks.register('fatJar', Jar) {
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    manifest {
+        attributes 'Main-Class': 'ru.Application'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveClassifier = 'fat'
+}
+
+build.dependsOn fatJar
 
 configurations {
     koraBom

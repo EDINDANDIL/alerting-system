@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# Build artifacts
+**/build/
+**/.gradle/
+
+# Docker
+Dockerfile
+docker-compose.yml
+**/Dockerfile
+
+# Scripts
+scripts/
+
+# Documentation
+*.md
+!README.md
+DEPLOYMENT.md
+
+# Environment
+.env
+.env.example
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+**/*.tmp
+**/*.swp
+**/*~
+
+# Test data
+**/test/
+**/tests/
