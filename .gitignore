@@ -18,9 +18,7 @@
 !.env.example
 
 # Docker volumes (локальные данные) - только в корне проекта
-alerting-kafka*/
 alerting-postgres*/
-kafka*/
 postgres*/
 *.log
 

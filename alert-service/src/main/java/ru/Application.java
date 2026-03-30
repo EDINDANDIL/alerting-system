@@ -1,6 +1,8 @@
 package ru;
 
 import ru.config.AlertConfig;
+import ru.services.ConnectionManagerImpl;
+import ru.services.WebSocketServer;
 import ru.tinkoff.kora.application.graph.KoraApplication;
 import ru.tinkoff.kora.common.KoraApp;
 import ru.tinkoff.kora.config.common.Config;

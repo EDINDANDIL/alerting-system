@@ -26,13 +26,11 @@ public final class ConnectionManagerImpl implements ConnectionManager {
 
     private final SessionStore sessionStore;
     private final JsonWriter<AlertMessage> alertWriter;
-    private final WebSocketServer webSocketServer;
     private final JsonFactory jsonFactory = new JsonFactory();
 
-    public ConnectionManagerImpl(SessionStore sessionStore, JsonWriter<AlertMessage> alertWriter, WebSocketServer webSocketServer) {
+    public ConnectionManagerImpl(SessionStore sessionStore, JsonWriter<AlertMessage> alertWriter) {
         this.sessionStore = sessionStore;
         this.alertWriter = alertWriter;
-        this.webSocketServer = webSocketServer;
     }
 
     @Override
