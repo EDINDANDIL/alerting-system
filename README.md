@@ -318,17 +318,17 @@ gradle :alert-service:test
 
 ## 🛠 Технологический стек
 
-| Категория | Технологии |
-|-----------|------------|
-| **Язык** | Java 25 |
-| **Фреймворк** | Kora Framework |
-| **Сборка** | Gradle 9.x |
-| **БД** | PostgreSQL 16 + Flyway |
-| **Шина событий** | Apache Kafka 3.9 |
-| **Контейнеризация** | Docker Compose |
+| Категория | Технологии               |
+|-----------|--------------------------|
+| **Язык** | Java 25                  |
+| **Фреймворк** | Kora Framework           |
+| **Сборка** | Gradle 9.x               |
+| **БД** | PostgreSQL 16 + Flyway   |
+| **Шина событий** | Apache Kafka 3.9         |
+| **Контейнеризация** | Docker Compose           |
 | **Тестирование** | JUnit 5 + Testcontainers |
-| **CLI** | Picocli + JLine |
-| **WebSocket** | Tyrus |
+| **CLI** | Picocli + JLine          |
+| **WebSocket** | Netty                        |
 
 ---
 
