@@ -19,6 +19,7 @@ application {
     mainClass = 'ru.Application'
 }
 
+
 // Создаём fat jar для Kora
 tasks.register('fatJar', Jar) {
     dependsOn configurations.runtimeClasspath

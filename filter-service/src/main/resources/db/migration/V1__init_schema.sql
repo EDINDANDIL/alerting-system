@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS impulse_filters (
     markets TEXT[] NOT NULL DEFAULT '{}',
     blacklist TEXT[] NOT NULL DEFAULT '{}',
     time_window_sec INTEGER NOT NULL,
-    direction_code VARCHAR(10) NOT NULL,
+    direction_code SMALLINT NOT NULL,
     percent INTEGER NOT NULL,
     volume_24h BIGINT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

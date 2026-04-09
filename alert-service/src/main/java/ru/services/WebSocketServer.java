@@ -1,11 +1,8 @@
 package ru.services;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -19,7 +16,7 @@ import ru.tinkoff.kora.common.Component;
 @Component
 public final class WebSocketServer implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(WebSocketServer.class);
-    private static final int DEFAULT_WS_PORT = 7818;
+    private static final int DEFAULT_WS_PORT = 7818; // TODO плохо, поменяй
 
     private final ConnectionManager connectionManager;
     private final int port;
@@ -45,8 +42,9 @@ public final class WebSocketServer implements AutoCloseable {
             return;
         }
 
-        bossGroup = new NioEventLoopGroup(1);
-        workerGroup = new NioEventLoopGroup();
+        workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        bossGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+
 
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(bossGroup, workerGroup)
@@ -57,12 +55,23 @@ public final class WebSocketServer implements AutoCloseable {
                         ch.pipeline()
                                 .addLast(new HttpServerCodec())
                                 .addLast(new HttpObjectAggregator(65_536))
-                                .addLast(new WebSocketServerProtocolHandler("/ws", null, true, 65536, true, true, false, 10000L))
+                                .addLast(new WebSocketServerProtocolHandler(
+                                        "/ws",
+                                        null,
+                                        true,
+                                        65536,
+                                        true,
+                                        true,
+                                        false,
+                                        10000L
+                                ))
                                 .addLast(new WebSocketHandler(connectionManager));
                     }
                 })
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
+
+        // TODO вот тут посмотри по документации
 
         serverChannel = bootstrap.bind(port).sync().channel();
         log.info("WebSocket server started on port {} (path=/ws)", port);
