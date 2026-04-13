@@ -27,6 +27,7 @@ public final class ErrorInterceptor implements HttpServerInterceptor {
             }
 
             var body = HttpBody.plaintext(e.getMessage());
+
             return switch (e) {
                 case IllegalArgumentException illegalArgumentException -> HttpServerResponse.of(400, body);
                 case TimeoutException timeoutException -> HttpServerResponse.of(408, body);

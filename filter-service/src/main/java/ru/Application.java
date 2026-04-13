@@ -14,7 +14,10 @@ import ru.tinkoff.kora.http.server.undertow.UndertowHttpServerModule;
 import ru.tinkoff.kora.json.common.JsonReader;
 import ru.tinkoff.kora.json.common.JsonWriter;
 import ru.tinkoff.kora.json.module.JsonModule;
+import ru.tinkoff.kora.kafka.common.KafkaModule;
 import ru.tinkoff.kora.logging.logback.LogbackModule;
+import ru.tinkoff.kora.scheduling.common.SchedulingModule;
+import ru.tinkoff.kora.scheduling.jdk.SchedulingJdkModule;
 
 @KoraApp
 public interface Application extends
@@ -23,7 +26,10 @@ public interface Application extends
         JdbcDatabaseModule,
         JsonModule,
         LogbackModule,
-        JdbcJsonbMapperModule {
+        JdbcJsonbMapperModule,
+        SchedulingModule,
+        SchedulingJdkModule,
+        KafkaModule {
 
     default EventOutboxMapper eventOutboxMapper() {
         return new ru.common.mappers.outbox.EventOutboxMapperImpl();

@@ -1,5 +1,8 @@
 package ru.common.util;
 
+import ru.tinkoff.kora.json.common.annotation.Json;
+
+@Json
 public enum OutboxOperation {
     CREATE(0),
     DELETE(1),

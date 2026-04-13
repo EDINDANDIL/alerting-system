@@ -7,15 +7,11 @@
 #   - PostgreSQL: localhost:5432 (filter_db / filter / filter)
 #   - Kafka: localhost:9092, localhost:9094, localhost:9096
 #   - filter-service: localhost:8081 (HTTP API)
-#   - outbox-sender: localhost:9099
 #   - data-processor: localhost:8082
 #   - alert-service: localhost:8090 (HTTP), localhost:7818 (WebSocket)
 #   - client-desktop: запуск отдельно через gradle
 
 services:
-  # ===========================================
-  # БАЗА ДАННЫХ
-  # ===========================================
   postgres:
     image: postgres:16-alpine
     container_name: alerting-postgres
@@ -168,7 +164,6 @@ services:
       postgres:
         condition: service_healthy
 
-  # Инициализация топиков Kafka
   kafka-init:
     image: apache/kafka:3.9.1
     container_name: kafka-init
@@ -191,11 +186,6 @@ services:
     networks:
       - alerting-network
 
-  # ===========================================
-  # JAVA СЕРВИСЫ
-  # ===========================================
-  
-  # Filter Service - HTTP API для управления фильтрами
   filter-service:
     build:
       context: .
@@ -220,34 +210,6 @@ services:
       - alerting-network
     restart: unless-stopped
 
-  # Outbox Sender - отправка событий из outbox в Kafka
-  outbox-sender:
-    build:
-      context: .
-      dockerfile: outbox-sender/Dockerfile
-    container_name: alerting-outbox-sender
-    ports:
-      - "9099:9099"
-      - "9089:9089"
-    environment:
-      DB_URL: "jdbc:postgresql://postgres:5432/filter_db"
-      DB_USERNAME: filter
-      DB_PASSWORD: filter
-      KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
-      KORA_CONFIG_APPLICATION: "application-docker.conf"
-      JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka1:
-        condition: service_healthy
-      filter-service:
-        condition: service_started
-    networks:
-      - alerting-network
-    restart: unless-stopped
-
-  # Data Processor - потоковая обработка трейдов
   data-processor:
     build:
       context: .
@@ -269,7 +231,6 @@ services:
       - alerting-network
     restart: unless-stopped
 
-  # Alert Service - WebSocket сервер для доставки алертов
   alert-service:
     build:
       context: .

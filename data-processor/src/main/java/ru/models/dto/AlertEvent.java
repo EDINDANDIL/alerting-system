@@ -12,4 +12,4 @@ public record AlertEvent(
         List<String> market,
         String symbol,
         long timestampNs
-) {};
+){}

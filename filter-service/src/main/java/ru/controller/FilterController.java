@@ -39,7 +39,6 @@ public class FilterController {
         return HttpServerResponse.of(200, HttpBody.plaintext("ok"));
     }
 
-
     @HttpRoute(method = HttpMethod.DELETE, path = "/api/filters")
 
     public HttpServerResponse unsubscribe(@Json Request dto, HttpServerRequest request)
@@ -52,5 +51,4 @@ public class FilterController {
 
         return HttpServerResponse.of(200, HttpBody.plaintext("ok"));
     }
-
 }
