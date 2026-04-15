@@ -1,16 +1,16 @@
 package ru.services.handlers;
 
 import ru.common.dto.OutboxCreatedEvent;
-import ru.core.cache.TradesStateStore;
+import ru.core.cache.TradesStorage;
 import ru.tinkoff.kora.common.Component;
 
 @Component
 public final class ImpulseFilterEventHandler implements FilterEventHandler {
 
-    private final TradesStateStore tradesStateStore;
+    private final TradesStorage tradesStorage;
 
-    public ImpulseFilterEventHandler(TradesStateStore tradesStateStore) {
-        this.tradesStateStore = tradesStateStore;
+    public ImpulseFilterEventHandler(TradesStorage tradesStorage) {
+        this.tradesStorage = tradesStorage;
     }
 
     @Override
@@ -20,6 +20,6 @@ public final class ImpulseFilterEventHandler implements FilterEventHandler {
 
     @Override
     public void apply(OutboxCreatedEvent event) {
-        tradesStateStore.apply(event);
+        tradesStorage.apply(event);
     }
 }

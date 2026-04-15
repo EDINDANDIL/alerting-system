@@ -11,7 +11,7 @@ public record OutboxCreatedEvent(
         String action,
         OutboxOperation operation,
         long filterId,
-        int userId,
+        long userId,
         OffsetDateTime createdAt,
         @Nullable OutboxPayload payload
 ) {}

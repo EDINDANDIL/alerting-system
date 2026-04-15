@@ -6,6 +6,7 @@ import ru.tinkoff.kora.json.common.annotation.JsonDiscriminatorField;
 import ru.tinkoff.kora.json.common.annotation.JsonDiscriminatorValue;
 
 import java.util.List;
+import java.util.Set;
 
 @Json
 @JsonDiscriminatorField("action")
@@ -14,9 +15,9 @@ public sealed interface OutboxPayload {
     @Json
     @JsonDiscriminatorValue("IMPULSE")
     record ImpulseFilter(
-            List<String> exchange,
-            List<String> market,
-            List<String> blackList,
+            Set<String> exchange,
+            Set<String> market,
+            Set<String> blackList,
             int timeWindow,
             Direction direction,
             int percent,

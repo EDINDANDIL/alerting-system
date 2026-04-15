@@ -8,16 +8,16 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
-public final class TradesStateStore {
-    private final Map<String, TradesFilterSection> sections;
+public final class TradesStorage {
+    private final Map<String, Storage> sections;
 
-    public TradesStateStore(All<TradesFilterSection> sections) {
+    public TradesStorage(All<Storage> sections) {
         this.sections = sections.stream()
-                .collect(Collectors.toMap(TradesFilterSection::action, s -> s));
+                .collect(Collectors.toMap(Storage::action, s -> s));
     }
 
     public void apply(OutboxCreatedEvent event) {
-        TradesFilterSection section = sections.get(event.action());
+        Storage section = sections.get(event.action());
         if (section == null) {
             throw new IllegalArgumentException("Unsupported Trades action: " + event.action());
         }

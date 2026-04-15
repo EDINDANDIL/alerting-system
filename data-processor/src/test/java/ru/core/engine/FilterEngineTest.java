@@ -149,9 +149,9 @@ class FilterEngineTest {
 
     private ImpulseFilterView impulseView(long filterId, Direction direction, int percent) {
         var payload = new OutboxPayload.ImpulseFilter(
-                List.of("binance"), List.of("futures"), List.of(),
+                Set.of("binance"), Set.of("futures"), Set.of(),
                 60, direction, percent, 0);
-        return new ImpulseFilterView(filterId, payload, Set.of(100));
+        return new ImpulseFilterView(filterId, payload, Set.of(100L));
     }
 
     private List<ImpulseFilterView> checkAll(

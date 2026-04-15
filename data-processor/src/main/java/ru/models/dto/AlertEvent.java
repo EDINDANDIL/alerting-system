@@ -7,9 +7,9 @@ import java.util.Set;
 
 @Json
 public record AlertEvent(
-        Set<Integer> subscribers,
-        List<String> exchange,
-        List<String> market,
+        Set<Long> subscribers,
+        Set<String> exchange,
+        Set<String> market,
         String symbol,
         long timestampNs
 ){}

@@ -47,6 +47,18 @@ public final class FilterEngine {
         return triggered;
     }
 
+    /**
+     * Проверить фильтры для одного окна.
+     * Используется из Index.check() — одно окно, набор фильтров.
+     */
+    public List<ImpulseFilterView> checkAll(SlidingWindow window, List<ImpulseFilterView> filters) {
+        List<ImpulseFilterView> triggered = new ArrayList<>();
+        for (ImpulseFilterView filter : filters) {
+            if (trigger(window, filter)) triggered.add(filter);
+        }
+        return triggered;
+    }
+
     // TODO: вынести в FilterStrategy когда появится wavelet/crossover
     private static boolean trigger(SlidingWindow window, ImpulseFilterView filter) {
         long min = window.getMin();

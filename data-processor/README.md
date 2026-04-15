@@ -1099,13 +1099,13 @@ TradeEvent (Kafka: trades-topic)
 @Component
 public final class ImpulseFilterEventHandler implements FilterEventHandler {
 
-    private final TradesStateStore tradesStateStore;
+    private final TradesStateStore tradesStorage;
 
     @Override public String action() { return "IMPULSE"; }
 
     @Override
     public void apply(OutboxCreatedEvent event) {
-        tradesStateStore.apply(event);
+        tradesStorage.apply(event);
     }
 }
 ```
@@ -1426,7 +1426,7 @@ public final class WaveletTradesSection implements TradesFilterSection {
 @Component
 public final class WaveletFilterEventHandler implements FilterEventHandler {
     @Override public String action() { return "WAVELET"; }
-    @Override public void apply(OutboxCreatedEvent event) { tradesStateStore.apply(event); }
+    @Override public void apply(OutboxCreatedEvent event) { tradesStorage.apply(event); }
 }
 ```
 

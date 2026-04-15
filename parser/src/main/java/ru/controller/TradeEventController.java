@@ -51,19 +51,49 @@ public class TradeEventController {
     }
 
     private int parseCount(HttpServerRequest request) {
-        try {
-            String body = request.body().toString();
-            int idx = body.indexOf("\"count\"");
-            if (idx >= 0) {
-                int colonIdx = body.indexOf(':', idx);
-                int endIdx = body.indexOf('}', colonIdx);
-                if (colonIdx > 0 && endIdx > colonIdx) {
-                    String val = body.substring(colonIdx + 1, endIdx).trim();
-                    return Integer.parseInt(val);
+        // 1. Query param: POST /api/trades/generate?count=500
+        var queryParams = request.queryParams();
+        var countValues = queryParams.get("count");
+        if (countValues != null && !countValues.isEmpty()) {
+            String countParam = countValues.iterator().next();
+            if (countParam != null && !countParam.isEmpty()) {
+                try {
+                    int v = Integer.parseInt(countParam);
+                    System.out.println("[parseCount] From query: " + v);
+                    return v;
+                } catch (NumberFormatException e) {
+                    System.err.println("[parseCount] Invalid query param count: " + countParam);
                 }
             }
-        } catch (Exception ignored) {
         }
+
+        // 2. JSON body: {"count": 500}
+        try {
+            var body = request.body();
+            java.io.InputStream is = body.asInputStream();
+            byte[] bytes = is.readAllBytes();
+            if (bytes != null && bytes.length > 0) {
+                String bodyStr = new String(bytes);
+                System.out.println("[parseCount] Body: " + bodyStr);
+                int idx = bodyStr.indexOf("\"count\"");
+                if (idx >= 0) {
+                    int colonIdx = bodyStr.indexOf(':', idx);
+                    int endIdx = bodyStr.indexOf(',', colonIdx);
+                    if (endIdx < 0) endIdx = bodyStr.indexOf('}', colonIdx);
+                    if (colonIdx > 0 && endIdx > colonIdx) {
+                        String val = bodyStr.substring(colonIdx + 1, endIdx).trim();
+                        int v = Integer.parseInt(val);
+                        System.out.println("[parseCount] From body: " + v);
+                        return v;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[parseCount] Body parse error: " + e.getMessage());
+        }
+
+        // 3. Default
+        System.out.println("[parseCount] Default: 100000");
         return 100000;
     }
 }

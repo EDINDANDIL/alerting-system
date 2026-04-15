@@ -24,6 +24,6 @@ public class TradesListener {
     void handle(String key, @Json TradeEvent event, @Log.off Exception exception) {
         if (exception != null) return;
         log.debug("Приняли событие {}", key);
-        tradesProcessor.process(key, event);
+        tradesProcessor.onTrade(key, event);
     }
 }

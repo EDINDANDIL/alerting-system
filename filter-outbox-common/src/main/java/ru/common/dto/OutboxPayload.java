@@ -3,6 +3,7 @@ package ru.common.dto;
 import ru.common.util.Direction;
 import ru.tinkoff.kora.json.common.annotation.*;
 import java.util.List;
+import java.util.Set;
 
 @Json
 @JsonDiscriminatorField("action")
@@ -13,7 +14,7 @@ public sealed interface OutboxPayload {
     record ImpulseFilter(
             List<String> exchange,
             List<String> market,
-            List<String> blackList,
+            Set<String> blackList,
             int timeWindow,
             Direction direction,
             int percent,

@@ -10,77 +10,49 @@ class WindowStoreTest {
     private final WindowStore store = new WindowStore();
 
     @Test
-    void getOrComputeWindow_createsNewWindow() {
+    void getOrCompute_createsNewWindow() {
         long twNs = 60L * 1_000_000_000L;
-        SlidingWindow w = store.getOrComputeWindow("btcusdt", twNs);
+        SlidingWindow w = store.getOrCompute(twNs);
         assertNotNull(w);
     }
 
     @Test
-    void getOrComputeWindow_sameSymbol_sameWindow() {
+    void getOrCompute_sameTimeWindow_sameInstance() {
         long twNs = 60L * 1_000_000_000L;
-        var w1 = store.getOrComputeWindow("btcusdt", twNs);
-        var w2 = store.getOrComputeWindow("btcusdt", twNs);
+        var w1 = store.getOrCompute(twNs);
+        var w2 = store.getOrCompute(twNs);
         assertSame(w1, w2);
     }
 
     @Test
-    void getOrComputeWindow_differentSymbols_differentWindows() {
-        long twNs = 60L * 1_000_000_000L;
-        var w1 = store.getOrComputeWindow("btcusdt", twNs);
-        var w2 = store.getOrComputeWindow("ethusdt", twNs);
-        assertNotSame(w1, w2);
-    }
-
-    @Test
-    void getOrComputeWindow_differentTimeWindows_differentWindows() {
-        var w5s = store.getOrComputeWindow("btcusdt", 5_000_000_000L);
-        var w60s = store.getOrComputeWindow("btcusdt", 60_000_000_000L);
+    void getOrCompute_differentTimeWindows_differentWindows() {
+        var w5s = store.getOrCompute(5_000_000_000L);
+        var w60s = store.getOrCompute(60_000_000_000L);
         assertNotSame(w5s, w60s);
     }
 
     @Test
-    void getWindows_returnsAllWindowsForSymbol() {
+    void get_returnsExistingWindow() {
+        long twNs = 60L * 1_000_000_000L;
+        store.getOrCompute(twNs);
+
+        var w = store.get(twNs);
+        assertTrue(w.isPresent());
+    }
+
+    @Test
+    void get_returnsEmptyForUnknownWindow() {
+        assertTrue(store.get(999L).isEmpty());
+    }
+
+    @Test
+    void multipleWindows_independentLifecycle() {
         long tw1 = 5_000_000_000L;
         long tw2 = 60_000_000_000L;
-        store.getOrComputeWindow("btcusdt", tw1);
-        store.getOrComputeWindow("btcusdt", tw2);
+        store.getOrCompute(tw1);
+        store.getOrCompute(tw2);
 
-        var windows = store.getWindows("btcusdt");
-        assertNotNull(windows);
-        assertEquals(2, windows.size());
-        assertTrue(windows.containsKey(tw1));
-        assertTrue(windows.containsKey(tw2));
-    }
-
-    @Test
-    void getWindows_nullForUnknownSymbol() {
-        assertNull(store.getWindows("unknown"));
-    }
-
-    @Test
-    void getWindows_removesSymbolAfterAllEntriesDead() {
-        long twNs = 60L * 1_000_000_000L;
-        store.getOrComputeWindow("btcusdt", twNs);
-
-        // Ждём > 60 секунд (TTL) — в реальном тесте это медленно,
-        // поэтому проверяем что getWindows возвращает данные сразу
-        var windows = store.getWindows("btcusdt");
-        assertNotNull(windows);
-        assertEquals(1, windows.size());
-    }
-
-    @Test
-    void multipleSymbols_independentLifecycle() {
-        long twNs = 60L * 1_000_000_000L;
-        store.getOrComputeWindow("btcusdt", twNs);
-        store.getOrComputeWindow("ethusdt", twNs);
-
-        var btc = store.getWindows("btcusdt");
-        var eth = store.getWindows("ethusdt");
-        assertNotNull(btc);
-        assertNotNull(eth);
-        assertEquals(1, btc.size());
-        assertEquals(1, eth.size());
+        assertTrue(store.get(tw1).isPresent());
+        assertTrue(store.get(tw2).isPresent());
     }
 }

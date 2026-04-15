@@ -8,5 +8,5 @@ import java.util.Set;
 public record ImpulseFilterView(
         long filterId,
         OutboxPayload.ImpulseFilter payload,
-        Set<Integer> subscribers
+        Set<Long> subscribers
 ) {}
