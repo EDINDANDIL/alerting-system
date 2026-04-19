@@ -85,7 +85,7 @@ public final class StorageImpl implements Storage {
         index.create(
                 event.filterId(),
                 payload.blackList(),
-                payload.timeWindow()
+                payload.timeWindow() * 1_000_000_000L
         );
     }
 }

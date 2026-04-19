@@ -16,23 +16,34 @@ import ru.tinkoff.kora.common.Component;
 @Component
 public final class WindowStore {
 
-    /** Глобальная таблица окон: timeWindowNs → SlidingWindow */
-    private final Map<Long, SlidingWindow> table = new ConcurrentHashMap<>();
+    /** Глобальная таблица окон {symbol : timeWindowNs → SlidingWindow} */
+    private final Map<String, Map<Long, SlidingWindow>> table = new ConcurrentHashMap<>();
 
-    public WindowStore() {
-    }
+    public WindowStore() {}
 
     /**
      * Получить окно по timeWindowNs.
      */
-    public Optional<SlidingWindow> get(Long time) {
-        return Optional.ofNullable(table.get(time));
+    public Optional<SlidingWindow> get(String symbol, long timeWindowNs) {
+        return Optional.ofNullable(table.get(symbol))
+        .map(m -> m.get(timeWindowNs));
+        // Это map от Optional, а не от stream, не путать
     }
 
     /**
-     * Получить или создать окно.
+     * Получить или создать окно для конкретного символа и временного окна.
      */
-    public SlidingWindow getOrCompute(long timeWindowNs) {
-        return table.computeIfAbsent(timeWindowNs, SlidingWindow::new);
+    public Optional<SlidingWindow> getOrCompute(String symbol, long timeWindowNs) {
+        return Optional.of(
+                table.computeIfAbsent(symbol, _ -> new ConcurrentHashMap<>())
+                        .computeIfAbsent(timeWindowNs, SlidingWindow::new)
+        );
+    }
+
+    /**
+     * Удалить все окна для символа (если больше нет фильтров).
+     */
+    public void removeSymbol(String symbol) {
+        table.remove(symbol);
     }
 }

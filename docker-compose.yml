@@ -221,7 +221,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
       KORA_CONFIG_APPLICATION: "application-docker.conf"
-      JAVA_TOOL_OPTIONS: "-Xmx768m -Xms512m"
+      JAVA_TOOL_OPTIONS: "-Xmx4g -Xms512m"
     depends_on:
       kafka1:
         condition: service_healthy

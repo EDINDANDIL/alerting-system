@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TradeProcessorIntegrationTest {
@@ -47,7 +46,7 @@ class TradeProcessorIntegrationTest {
         when(alertPublisher.send(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         processor = new TradeProcessor(index, alertPublisher);
-        windowStore.getOrCompute(60_000_000_000L);
+        windowStore.getOrCompute(SYM, 60_000_000_000L);
     }
 
     @Test
@@ -59,8 +58,8 @@ class TradeProcessorIntegrationTest {
 
     @Test
     void trade_belowThreshold_noAlert() {
-        createFilter(1L, 60, Direction.UP, 10);
-        subscribe(1L, 100);
+        createFilter();
+        subscribe();
 
         processor.onTrade(null, trade(1L, 100L));
         processor.onTrade(null, trade(2L, 105L));
@@ -70,8 +69,8 @@ class TradeProcessorIntegrationTest {
 
     @Test
     void trade_blacklistedSymbol_noAlert() {
-        createFilterWithBlacklist(1L, 60, Direction.UP, 5, List.of(SYM));
-        subscribe(1L, 100);
+        createFilterWithBlacklist(List.of(SYM));
+        subscribe();
 
         processor.onTrade(null, trade(1L, 100L));
         processor.onTrade(null, trade(2L, 200L));
@@ -81,7 +80,7 @@ class TradeProcessorIntegrationTest {
 
     @Test
     void trade_noSubscribe_noAlert() {
-        createFilter(1L, 60, Direction.UP, 10);
+        createFilter();
 
         processor.onTrade(null, trade(1L, 100L));
         processor.onTrade(null, trade(2L, 200L));
@@ -91,8 +90,8 @@ class TradeProcessorIntegrationTest {
 
     @Test
     void trade_downMove_noTriggerOnUpFilter() {
-        createFilter(1L, 60, Direction.UP, 10);
-        subscribe(1L, 100);
+        createFilter();
+        subscribe();
 
         processor.onTrade(null, trade(1L, 100L));
         processor.onTrade(null, trade(2L, 80L));
@@ -100,28 +99,28 @@ class TradeProcessorIntegrationTest {
         verifyNoInteractions(alertPublisher);
     }
 
-    private void createFilter(long filterId, int timeWindow, Direction dir, int percent) {
-        var payload = impulsePayload(Set.of(), timeWindow, dir, percent);
-        filterStore.put(filterId, new ImpulseFilterView(
-            filterId, payload, new HashSet<>()));
-        index.create(filterId, null, timeWindow);
-        windowStore.getOrCompute(timeWindow * 1_000_000_000L);
+    private void createFilter() {
+        var payload = impulsePayload(Set.of(), 60, Direction.UP, 10);
+        filterStore.put(1L, new ImpulseFilterView(
+                1L, payload, new HashSet<>()));
+        index.create(1L, null, 60);
+        windowStore.getOrCompute(SYM, 60 * 1_000_000_000L);
     }
 
-    private void createFilterWithBlacklist(long filterId, int timeWindow, Direction dir, int percent, List<String> bl) {
-        var payload = impulsePayload(new HashSet<>(bl), timeWindow, dir, percent);
-        filterStore.put(filterId, new ImpulseFilterView(
-            filterId, payload, new HashSet<>()));
-        index.create(filterId, Set.copyOf(bl), timeWindow);
-        windowStore.getOrCompute(timeWindow * 1_000_000_000L);
+    private void createFilterWithBlacklist(List<String> bl) {
+        var payload = impulsePayload(new HashSet<>(bl), 60, Direction.UP, 5);
+        filterStore.put(1L, new ImpulseFilterView(
+                1L, payload, new HashSet<>()));
+        index.create(1L, Set.copyOf(bl), 60);
+        windowStore.getOrCompute(SYM, 60 * 1_000_000_000L);
     }
 
-    private void subscribe(long filterId, int userId) {
-        var old = filterStore.get(filterId);
+    private void subscribe() {
+        var old = filterStore.get(1L);
         if (old != null) {
             Set<Long> newSubs = new HashSet<>(old.subscribers());
-            newSubs.add((long) userId);
-            filterStore.put(filterId, new ImpulseFilterView(
+            newSubs.add((long) 100);
+            filterStore.put(1L, new ImpulseFilterView(
                 old.filterId(), old.payload(), newSubs));
         }
     }

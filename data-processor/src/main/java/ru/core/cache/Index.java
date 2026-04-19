@@ -15,9 +15,9 @@ import java.util.stream.Collectors;
 /**
  * Координатор обработки трейдов:
  *   addPoint → обновить окна
- *   check    → проверить фильтры
- *   create   → зарегистрировать фильтр для символов
- *   delete   → убрать фильтр отовсюду
+ *   check → проверить фильтры
+ *   create → зарегистрировать фильтр для символов
+ *   delete → убрать фильтр отовсюду
  */
 @Component
 public final class Index {
@@ -27,7 +27,7 @@ public final class Index {
     private final FilterStore section;
     private final FilterEngine filterEngine;
 
-    private final Map<String, Map<Long, Set<Long>>> index = new ConcurrentHashMap<>();
+    private final Map<String, Map<Long, Set<Long>>> mainTable = new ConcurrentHashMap<>();
 
     public Index(MonetStore store, WindowStore windowStore,
                  FilterStore section, FilterEngine filterEngine) {
@@ -37,17 +37,21 @@ public final class Index {
         this.filterEngine = filterEngine;
     }
 
+
+
     public void addPoint(TradeEvent event) {
-        Map<Long, Set<Long>> windows = index.get(event.symbol());
+        Map<Long, Set<Long>> windows = mainTable.get(event.symbol());
         if (windows == null) return;
         TradePoint point = new TradePoint(event.timestampNs(), event.price());
         windows.keySet().forEach(
-        timeNs -> windowStore.get(timeNs).ifPresent(w -> w.add(point))
+        timeNs -> windowStore.getOrCompute(event.symbol(), timeNs).ifPresent(w -> w.add(point))
         );
     }
 
+
+
     public List<ImpulseFilterView> check(String symbol) {
-        Map<Long, Set<Long>> windows = index.get(symbol);
+        Map<Long, Set<Long>> windows = mainTable.get(symbol);
         if (windows == null) return List.of();
 
         List<ImpulseFilterView> result = new ArrayList<>();
@@ -56,7 +60,7 @@ public final class Index {
             Set<Long> filterIds = entry.getValue();
             if (filterIds.isEmpty()) continue;
 
-            SlidingWindow w = windowStore.get(twNs).orElse(null);
+            SlidingWindow w = windowStore.getOrCompute(symbol,twNs).orElse(null);
             if (w == null) continue;
 
             List<ImpulseFilterView> filters = section.getAll(filterIds);
@@ -67,6 +71,8 @@ public final class Index {
         return result;
     }
 
+
+
     public Map<String, Map<Long, Set<Long>>> create(long id, Set<String> blacklist, long time) {
 
         Set<String> allowed = store.getSymbols()
@@ -75,20 +81,23 @@ public final class Index {
             .collect(Collectors.toSet());
 
         allowed.forEach(
-    s -> index.computeIfAbsent(s, k -> new ConcurrentHashMap<>())
-            .computeIfAbsent(time, t -> ConcurrentHashMap.newKeySet())
+    s -> mainTable.computeIfAbsent(s, _ -> new ConcurrentHashMap<>())
+            .computeIfAbsent(time, _ -> ConcurrentHashMap.newKeySet())
             .add(id));
 
-        return index;
+        return mainTable;
     }
 
+
+
     public void delete(long id) {
-        index.forEach((symbol, windows) ->
-                windows.forEach((time, ids) -> ids.remove(id))
-        );
-        index.values().forEach(windows ->
-                windows.values().removeIf(Set::isEmpty)
-        );
-        index.values().removeIf(Map::isEmpty);
+
+        mainTable.values()
+                .forEach(windows -> {
+                    windows.values().forEach(ids -> ids.remove(id));
+                    windows.values().removeIf(Set::isEmpty);
+                });
+
+        mainTable.values().removeIf(Map::isEmpty);
     }
 }

@@ -16,7 +16,6 @@ public class TradesListener {
     private final TradeProcessor tradesProcessor;
     private static final Logger log = LoggerFactory.getLogger(TradesListener.class);
 
-
     public TradesListener(TradeProcessor tradesProcessor) {
         this.tradesProcessor = tradesProcessor;
     }

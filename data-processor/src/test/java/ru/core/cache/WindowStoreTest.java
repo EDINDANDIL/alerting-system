@@ -9,50 +9,52 @@ class WindowStoreTest {
 
     private final WindowStore store = new WindowStore();
 
+    private static final String SYMBOL = "ETH";
+
     @Test
     void getOrCompute_createsNewWindow() {
         long twNs = 60L * 1_000_000_000L;
-        SlidingWindow w = store.getOrCompute(twNs);
+        SlidingWindow w = store.getOrCompute(SYMBOL, twNs);
         assertNotNull(w);
     }
 
     @Test
     void getOrCompute_sameTimeWindow_sameInstance() {
         long twNs = 60L * 1_000_000_000L;
-        var w1 = store.getOrCompute(twNs);
-        var w2 = store.getOrCompute(twNs);
+        var w1 = store.getOrCompute(SYMBOL, twNs);
+        var w2 = store.getOrCompute(SYMBOL, twNs);
         assertSame(w1, w2);
     }
 
     @Test
     void getOrCompute_differentTimeWindows_differentWindows() {
-        var w5s = store.getOrCompute(5_000_000_000L);
-        var w60s = store.getOrCompute(60_000_000_000L);
+        var w5s = store.getOrCompute(SYMBOL, 5_000_000_000L);
+        var w60s = store.getOrCompute(SYMBOL, 60_000_000_000L);
         assertNotSame(w5s, w60s);
     }
 
     @Test
     void get_returnsExistingWindow() {
         long twNs = 60L * 1_000_000_000L;
-        store.getOrCompute(twNs);
+        store.getOrCompute(SYMBOL, twNs);
 
-        var w = store.get(twNs);
+        var w = store.get(SYMBOL, twNs);
         assertTrue(w.isPresent());
     }
 
     @Test
     void get_returnsEmptyForUnknownWindow() {
-        assertTrue(store.get(999L).isEmpty());
+        assertTrue(store.get(SYMBOL, 999L).isEmpty());
     }
 
     @Test
     void multipleWindows_independentLifecycle() {
         long tw1 = 5_000_000_000L;
         long tw2 = 60_000_000_000L;
-        store.getOrCompute(tw1);
-        store.getOrCompute(tw2);
+        store.getOrCompute(SYMBOL, tw1);
+        store.getOrCompute(SYMBOL, tw2);
 
-        assertTrue(store.get(tw1).isPresent());
-        assertTrue(store.get(tw2).isPresent());
+        assertTrue(store.get(SYMBOL, tw1).isPresent());
+        assertTrue(store.get(SYMBOL, tw2).isPresent());
     }
 }

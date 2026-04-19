@@ -45,7 +45,7 @@ class IndexTest {
         @Test
         void addPoint_knownSymbol_addsPoint() {
             createFilterForSymbol(1L, SYMBOL);
-            windowStore.getOrCompute(60_000_000_000L);
+            windowStore.getOrCompute(SYMBOL, 60_000_000_000L);
             index.addPoint(trade(1L, 100L));
             assertDoesNotThrow(() -> {});
         }
@@ -69,7 +69,7 @@ class IndexTest {
         @Test
         void check_filterNotTriggered_returnsEmpty() {
             createFilterForSymbol(1L, SYMBOL);
-            windowStore.getOrCompute(60_000_000_000L);
+            windowStore.getOrCompute(SYMBOL, 60_000_000_000L);
             index.addPoint(trade(1L, 100L));
             index.addPoint(trade(2L, 105L));
 

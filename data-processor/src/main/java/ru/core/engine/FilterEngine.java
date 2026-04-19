@@ -67,7 +67,8 @@ public final class FilterEngine {
 
         boolean isUp = window.isUpMove();
         double pct = filter.payload().percent();
-        boolean amplitude = max * 100L > min * (100L + (long) pct);
+//        boolean amplitude = max * 100L > min * (100L + (long) pct);
+        boolean amplitude = max * 100L >= min * (100L + pct);
 
         return switch (filter.payload().direction()) {
             case UP -> isUp && amplitude;

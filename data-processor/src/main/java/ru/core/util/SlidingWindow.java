@@ -5,6 +5,10 @@ import ru.models.domain.TradePoint;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+/**
+ * Скользящее окно - структура для работы с ОДНОЙ монетой блокирующего, синхронно.
+ * Одна монета = один поток
+ */
 public class SlidingWindow {
 
     private final long windowLengthNs;
@@ -15,7 +19,7 @@ public class SlidingWindow {
         this.windowLengthNs = windowLengthNs;
     }
 
-    public synchronized void add(TradePoint newPoint) {
+    public void add(TradePoint newPoint) {
         long cutoff = newPoint.timestampNs() - windowLengthNs;
 
         while (!minDeque.isEmpty() && minDeque.getFirst().timestampNs() < cutoff) {
@@ -36,18 +40,18 @@ public class SlidingWindow {
         maxDeque.addLast(newPoint);
     }
 
-    public synchronized long getMin() {
+    public long getMin() {
         if (minDeque.isEmpty()) return 0L;
         return minDeque.getFirst().priceRaw();
     }
 
-    public synchronized long getMax() {
+    public long getMax() {
         if (maxDeque.isEmpty()) return 0L;
         return maxDeque.getFirst().priceRaw();
     }
 
     /** true если максимум по времени ПОЗЖЕ минимума (рост), false — падение. */
-    public synchronized boolean isUpMove() {
+    public boolean isUpMove() {
         if (minDeque.isEmpty() || maxDeque.isEmpty()) return false;
         return maxDeque.getFirst().timestampNs() >= minDeque.getFirst().timestampNs();
     }
@@ -55,7 +59,7 @@ public class SlidingWindow {
     /**
      * Проверить, есть ли данные в окне.
      */
-    public synchronized boolean isEmpty() {
+    public boolean isEmpty() {
         return minDeque.isEmpty();
     }
 }
