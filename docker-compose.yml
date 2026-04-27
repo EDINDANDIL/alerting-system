@@ -210,26 +210,26 @@ services:
       - alerting-network
     restart: unless-stopped
 
-  data-processor:
-    build:
-      context: .
-      dockerfile: data-processor/Dockerfile
-    container_name: alerting-data-processor
-    ports:
-      - "8082:8082"
-      - "8087:8087"
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
-      KORA_CONFIG_APPLICATION: "application-docker.conf"
-      JAVA_TOOL_OPTIONS: "-Xmx4g -Xms512m"
-    depends_on:
-      kafka1:
-        condition: service_healthy
-      kafka-init:
-        condition: service_completed_successfully
-    networks:
-      - alerting-network
-    restart: unless-stopped
+#  data-processor:
+#    build:
+#      context: .
+#      dockerfile: data-processor/Dockerfile
+#    container_name: alerting-data-processor
+#    ports:
+#      - "8082:8082"
+#      - "8087:8087"
+#    environment:
+#      KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
+#      KORA_CONFIG_APPLICATION: "application-docker.conf"
+#      JAVA_TOOL_OPTIONS: "-Xmx4g -Xms512m"
+#    depends_on:
+#      kafka1:
+#        condition: service_healthy
+#      kafka-init:
+#        condition: service_completed_successfully
+#    networks:
+#      - alerting-network
+#    restart: unless-stopped
 
   alert-service:
     build:
@@ -252,6 +252,71 @@ services:
       - alerting-network
     restart: unless-stopped
 
+
+  flink-jobmanager:
+    image: flink:2.2.0-java21
+    container_name: flink-jobmanager
+    user: "0:0"
+    command: jobmanager
+    ports:
+      - "8088:8081"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 4
+        state.checkpoints.dir: file:///opt/flink/checkpoints
+        execution.checkpointing.interval: 10s
+      - KAFKA_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9092,kafka3:9092
+    volumes:
+      - flink_checkpoints:/opt/flink/checkpoints
+      - ./data-processor/build/libs:/opt/flink/usrlib
+    networks:
+      - alerting-network
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+
+  flink-taskmanager:
+    image: flink:2.2.0-java21
+    container_name: flink-taskmanager
+    user: "0:0"
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 4
+        state.checkpoints.dir: file:///opt/flink/checkpoints
+      - KAFKA_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9092,kafka3:9092
+    volumes:
+      - flink_checkpoints:/opt/flink/checkpoints
+    networks:
+      - alerting-network
+    depends_on:
+      - flink-jobmanager
+
+  flink-data-processor-submit:
+      image: flink:2.2.0-java21
+      container_name: flink-data-processor-submit
+      restart: "no"
+      command:
+        - bash
+        - -c
+        - sleep 15 && flink run -d -m flink-jobmanager:8081 -c ru.flink.DataProcessorJob /opt/flink/usrlib/data-processor-1.0-SNAPSHOT-fat.jar
+      environment:
+        - KAFKA_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9092,kafka3:9092
+      volumes:
+        - ./data-processor/build/libs:/opt/flink/usrlib
+      networks:
+        - alerting-network
+      depends_on:
+        - flink-jobmanager
+        - flink-taskmanager
+
 networks:
   alerting-network:
     name: alerting-network
@@ -266,3 +331,5 @@ volumes:
     name: alerting-kafka2-data
   kafka3_data:
     name: alerting-kafka3-data
+  flink_checkpoints:
+    name: alerting-flink-checkpoints

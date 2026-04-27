@@ -4,9 +4,8 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import ru.dto.Message;
 import ru.dto.TradeEvent;
 import ru.publishers.TradesGenerator;
+import ru.serde.TradeEventBinaryEncoder;
 import ru.tinkoff.kora.common.Component;
-
-import java.util.concurrent.ThreadLocalRandom;
 
 @Component
 public class TradeEventGenerator {
@@ -36,7 +35,11 @@ public class TradeEventGenerator {
                     price, 0L, 0L, 0, 0
             );
 
-            publisher.send(new ProducerRecord<>("trades-topic", "BST", event));
+            publisher.send(new ProducerRecord<>(
+                    "trades-topic",
+                    event.symbol(),
+                    TradeEventBinaryEncoder.encode(event)
+            ));
         }
     }
 }
