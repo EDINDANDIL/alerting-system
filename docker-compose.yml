@@ -177,7 +177,8 @@ services:
     entrypoint: >
       /bin/sh -c "
         echo 'Создание топиков Kafka...'
-        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server kafka1:9092 --topic trades-topic --partitions 32 --replication-factor 1 --config retention.ms=10
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server kafka1:9092 --topic trades-topic --partitions 32 --replication-factor 1 --config retention.ms=3600000
+        /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka1:9092 --entity-type topics --entity-name trades-topic --alter --add-config retention.ms=3600000
         /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server kafka1:9092 --topic filter-topic --partitions 8 --replication-factor 1 --config retention.ms=604800000
         /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server kafka1:9092 --topic alert-topic --partitions 8 --replication-factor 1 --config retention.ms=86400000
         echo 'Топики созданы!'
@@ -188,7 +189,7 @@ services:
 
   filter-service:
     build:
-      context: .
+      context: ../../AppData/Local/Temp/Rar$DRa27500.28102.rartemp
       dockerfile: filter-service/Dockerfile
     container_name: alerting-filter-service
     ports:
@@ -233,7 +234,7 @@ services:
 
   alert-service:
     build:
-      context: .
+      context: ../../AppData/Local/Temp/Rar$DRa27500.28102.rartemp
       dockerfile: alert-service/Dockerfile
     container_name: alerting-alert-service
     ports:
@@ -299,6 +300,20 @@ services:
     depends_on:
       - flink-jobmanager
 
+  data-processor-builder:
+    image: eclipse-temurin:21-jdk
+    container_name: data-processor-builder
+    working_dir: /workspace
+    command:
+      - bash
+      - -c
+      - java -jar gradle/wrapper/gradle-wrapper.jar :data-processor:fatJar --no-daemon
+    volumes:
+      - .:/workspace
+      - gradle_cache:/root/.gradle
+    networks:
+      - alerting-network
+    restart: "no"
   flink-data-processor-submit:
       image: flink:2.2.0-java21
       container_name: flink-data-processor-submit
@@ -314,8 +329,12 @@ services:
       networks:
         - alerting-network
       depends_on:
-        - flink-jobmanager
-        - flink-taskmanager
+        flink-jobmanager:
+          condition: service_started
+        flink-taskmanager:
+          condition: service_started
+        data-processor-builder:
+          condition: service_completed_successfully
 
 networks:
   alerting-network:
@@ -333,3 +352,5 @@ volumes:
     name: alerting-kafka3-data
   flink_checkpoints:
     name: alerting-flink-checkpoints
+  gradle_cache:
+    name: alerting-gradle-cache

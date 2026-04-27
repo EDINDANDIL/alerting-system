@@ -28,12 +28,23 @@ class TradeTickKafkaDeserializerTest {
     }
 
     @Test
-    void deserialize_emptyKey_skipsRecord() {
+    void deserialize_emptyKey_emitsTradeTickWithEmptySymbol() {
         List<TradeTick> out = new ArrayList<>();
 
         deserializer.deserialize(record("", payload(100L, 123_456L)), collector(out));
 
-        assertTrue(out.isEmpty());
+        assertEquals(1, out.size());
+        assertEquals(new TradeTick("", 100L, 123_456L), out.getFirst());
+    }
+
+    @Test
+    void deserialize_nullKey_emitsTradeTickWithEmptySymbol() {
+        List<TradeTick> out = new ArrayList<>();
+
+        deserializer.deserialize(record(null, payload(100L, 123_456L)), collector(out));
+
+        assertEquals(1, out.size());
+        assertEquals(new TradeTick("", 100L, 123_456L), out.getFirst());
     }
 
     @Test
@@ -46,9 +57,8 @@ class TradeTickKafkaDeserializerTest {
     }
 
     @Test
-    void deserialize_unsupportedHeader_skipsRecord() {
-        byte[] payload = payload(100L, 123_456L);
-        ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN).putInt(0, 999);
+    void deserialize_headeredPayload_skipsRecord() {
+        byte[] payload = headeredPayload(100L, 123_456L);
         List<TradeTick> out = new ArrayList<>();
 
         deserializer.deserialize(record("BST", payload), collector(out));
@@ -66,7 +76,7 @@ class TradeTickKafkaDeserializerTest {
                 "trades-topic",
                 0,
                 0L,
-                key.getBytes(StandardCharsets.UTF_8),
+                key == null ? null : key.getBytes(StandardCharsets.UTF_8),
                 value
         );
     }
@@ -85,6 +95,13 @@ class TradeTickKafkaDeserializerTest {
     }
 
     private static byte[] payload(long price, long timestampNs) {
+        ByteBuffer buffer = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN);
+        buffer.putLong(price);
+        buffer.putLong(timestampNs);
+        return buffer.array();
+    }
+
+    private static byte[] headeredPayload(long price, long timestampNs) {
         ByteBuffer buffer = ByteBuffer.allocate(36).order(ByteOrder.LITTLE_ENDIAN);
         buffer.putInt(1);
         buffer.putInt(2);
