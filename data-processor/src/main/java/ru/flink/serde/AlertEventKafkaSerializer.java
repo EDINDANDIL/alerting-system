@@ -10,6 +10,7 @@ import ru.tinkoff.kora.json.module.JsonModule;
 
 import java.nio.charset.StandardCharsets;
 
+// TODO вынести в common
 public final class AlertEventKafkaSerializer
         implements KafkaRecordSerializationSchema<AlertEvent> {
 
