@@ -2,7 +2,7 @@ package ru.service;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import ru.dto.Message;
-import ru.dto.TradeEvent;
+import ru.dto.TradeTick;
 import ru.publishers.TradesGenerator;
 import ru.serde.TradeEventBinaryEncoder;
 import ru.tinkoff.kora.common.Component;
@@ -20,6 +20,7 @@ public class TradeEventGenerator {
         long price = msg.startPrice();
         long steps = msg.steps();
         long count = msg.count();
+        String symbol = msg.symbol() == null || msg.symbol().isBlank() ? "BST" : msg.symbol();
         double percent = Double.parseDouble(msg.changePercent());
         boolean up = "UP".equals(msg.trend());
 
@@ -29,15 +30,11 @@ public class TradeEventGenerator {
                 else price = price * (100 - (long) percent) / 100;
             }
 
-            TradeEvent event = new TradeEvent(
-                    "binance", "futures", "BST", 0L,
-                    System.nanoTime(), 0L, 0L,
-                    price, 0L, 0L, 0, 0
-            );
+            TradeTick event = new TradeTick(price, System.nanoTime());
 
             publisher.send(new ProducerRecord<>(
                     "trades-topic",
-                    event.symbol(),
+                    symbol,
                     TradeEventBinaryEncoder.encode(event)
             ));
         }

@@ -36,5 +36,5 @@ public record ImpulseFilterEntity(
         Integer percent,
 
         @Column("volume_24h")
-        Long volume24h
+        Long volume24h //TODO
 ) {}

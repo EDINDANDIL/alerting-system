@@ -1,7 +1,6 @@
 package ru.flink.model;
 
-
-public record TradeTick(
+public record KeyedTradeTick(
         String symbol,
         long price,
         long timestampNs

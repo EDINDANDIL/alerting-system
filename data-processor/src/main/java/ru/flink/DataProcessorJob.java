@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import ru.common.dto.OutboxCreatedEvent;
 import ru.flink.model.AlertEvent;
 import ru.flink.model.RuntimeFilter;
-import ru.flink.model.TradeTick;
+import ru.flink.model.KeyedTradeTick;
 import ru.flink.operator.AlertProcessFunction;
 import ru.flink.serde.AlertEventKafkaSerializer;
 import ru.flink.serde.FilterEventDeserializer;
@@ -29,12 +29,13 @@ public final class DataProcessorJob {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
+        // TODO вынести конфиги в другое место
         env.enableCheckpointing(10_000);
         env.setParallelism(intEnv("FLINK_PARALLELISM", 4));
 
         String brokers = env("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092");
 
-        KafkaSource<TradeTick> tradesSource = KafkaSource.<TradeTick>builder()
+        KafkaSource<KeyedTradeTick> tradesSource = KafkaSource.<KeyedTradeTick>builder()
                 .setBootstrapServers(brokers)
                 .setTopics(TRADES_TOPIC)
                 .setGroupId("flink-data-processor-trades")
@@ -63,21 +64,21 @@ public final class DataProcessorJob {
                         RuntimeFilter.class
                 );
 
-        KeyedStream<TradeTick, String> trades = env
+        KeyedStream<KeyedTradeTick, String> trades = env
                 .fromSource(tradesSource, WatermarkStrategy.noWatermarks(), "trades-source")
                 .name("read-trades")
                 .map(tick -> {
-                    log.info("trade received: symbol={} price={} timestampNs={}",
+                    log.debug("trade received: symbol={} price={} timestampNs={}",
                             tick.symbol(), tick.price(), tick.timestampNs());
                     return tick;
                 })
-                .keyBy(TradeTick::symbol);
+                .keyBy(KeyedTradeTick::symbol);
 
         BroadcastStream<OutboxCreatedEvent> filters = env
                 .fromSource(filtersSource, WatermarkStrategy.noWatermarks(), "filters-source")
                 .name("read-filters")
                 .map(filter -> {
-                    log.info("filter accepted: {}", filter);
+                    log.debug("filter accepted: {}", filter);
                     return filter;
                 })
                 .broadcast(filtersDescriptor);

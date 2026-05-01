@@ -8,7 +8,8 @@ import ru.tinkoff.kora.json.common.annotation.Json;
  *   "startPrice": 50000,
  *   "trend": "UP",
  *   "changePercent": 5,
- *   "steps": 300
+ *   "steps": 300,
+ *   "symbol": "BST"
  * }
  */
 @Json
@@ -17,5 +18,6 @@ public record Message(
         Long startPrice,
         String trend,
         String changePercent,
-        Long steps
+        Long steps,
+        String symbol
 ) {}

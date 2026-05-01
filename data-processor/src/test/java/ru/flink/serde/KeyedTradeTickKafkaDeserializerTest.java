@@ -3,7 +3,7 @@ package ru.flink.serde;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.apache.flink.util.Collector;
-import ru.flink.model.TradeTick;
+import ru.flink.model.KeyedTradeTick;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -13,43 +13,43 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TradeTickKafkaDeserializerTest {
+class KeyedTradeTickKafkaDeserializerTest {
 
     private final TradeTickKafkaDeserializer deserializer = new TradeTickKafkaDeserializer();
 
     @Test
     void deserialize_validRecord_emitsTradeTick() {
-        List<TradeTick> out = new ArrayList<>();
+        List<KeyedTradeTick> out = new ArrayList<>();
 
         deserializer.deserialize(record("BST", payload(100L, 123_456L)), collector(out));
 
         assertEquals(1, out.size());
-        assertEquals(new TradeTick("BST", 100L, 123_456L), out.getFirst());
+        assertEquals(new KeyedTradeTick("BST", 100L, 123_456L), out.getFirst());
     }
 
     @Test
     void deserialize_emptyKey_emitsTradeTickWithEmptySymbol() {
-        List<TradeTick> out = new ArrayList<>();
+        List<KeyedTradeTick> out = new ArrayList<>();
 
         deserializer.deserialize(record("", payload(100L, 123_456L)), collector(out));
 
         assertEquals(1, out.size());
-        assertEquals(new TradeTick("", 100L, 123_456L), out.getFirst());
+        assertEquals(new KeyedTradeTick("", 100L, 123_456L), out.getFirst());
     }
 
     @Test
     void deserialize_nullKey_emitsTradeTickWithEmptySymbol() {
-        List<TradeTick> out = new ArrayList<>();
+        List<KeyedTradeTick> out = new ArrayList<>();
 
         deserializer.deserialize(record(null, payload(100L, 123_456L)), collector(out));
 
         assertEquals(1, out.size());
-        assertEquals(new TradeTick("", 100L, 123_456L), out.getFirst());
+        assertEquals(new KeyedTradeTick("", 100L, 123_456L), out.getFirst());
     }
 
     @Test
     void deserialize_invalidPayloadSize_skipsRecord() {
-        List<TradeTick> out = new ArrayList<>();
+        List<KeyedTradeTick> out = new ArrayList<>();
 
         deserializer.deserialize(record("BST", new byte[35]), collector(out));
 
@@ -59,7 +59,7 @@ class TradeTickKafkaDeserializerTest {
     @Test
     void deserialize_headeredPayload_skipsRecord() {
         byte[] payload = headeredPayload(100L, 123_456L);
-        List<TradeTick> out = new ArrayList<>();
+        List<KeyedTradeTick> out = new ArrayList<>();
 
         deserializer.deserialize(record("BST", payload), collector(out));
 
@@ -68,7 +68,7 @@ class TradeTickKafkaDeserializerTest {
 
     @Test
     void getProducedType_returnsTradeTickType() {
-        assertEquals(TradeTick.class, deserializer.getProducedType().getTypeClass());
+        assertEquals(KeyedTradeTick.class, deserializer.getProducedType().getTypeClass());
     }
 
     private static ConsumerRecord<byte[], byte[]> record(String key, byte[] value) {
@@ -81,10 +81,10 @@ class TradeTickKafkaDeserializerTest {
         );
     }
 
-    private static Collector<TradeTick> collector(List<TradeTick> out) {
+    private static Collector<KeyedTradeTick> collector(List<KeyedTradeTick> out) {
         return new Collector<>() {
             @Override
-            public void collect(TradeTick record) {
+            public void collect(KeyedTradeTick record) {
                 out.add(record);
             }
 

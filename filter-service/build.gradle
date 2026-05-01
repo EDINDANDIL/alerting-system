@@ -67,7 +67,6 @@ dependencies {
     implementation "ru.tinkoff.kora:jackson-module"
     implementation "ru.tinkoff.kora:scheduling-jdk"
 
-    // Flyway для миграций БД
     implementation "org.flywaydb:flyway-core:10.17.0"
     implementation "org.flywaydb:flyway-database-postgresql:10.17.0"
 }

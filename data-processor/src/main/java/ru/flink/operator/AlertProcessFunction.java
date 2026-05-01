@@ -11,7 +11,7 @@ import ru.common.dto.OutboxCreatedEvent;
 import ru.common.dto.OutboxPayload;
 import ru.flink.model.AlertEvent;
 import ru.flink.model.RuntimeFilter;
-import ru.flink.model.TradeTick;
+import ru.flink.model.KeyedTradeTick;
 import ru.flink.state.PriceWindow;
 import ru.flink.strategy.ImpulseStrategy;
 import ru.flink.model.TradePoint;
@@ -25,7 +25,7 @@ import java.util.Set;
 
 public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
         String,
-        TradeTick,
+        KeyedTradeTick,
         OutboxCreatedEvent,
         AlertEvent> {
 
@@ -97,7 +97,7 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
 
     @Override
     public void processElement(
-            TradeTick tick,
+            KeyedTradeTick tick,
             ReadOnlyContext ctx,
             Collector<AlertEvent> out
     ) throws Exception {

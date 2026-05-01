@@ -29,3 +29,40 @@ subprojects {
         archiveClassifier = 'all'
     }
 }
+
+tasks.register('buildArtifacts') {
+    dependsOn ':parser:build'
+    dependsOn ':filter-service:fatJar'
+    dependsOn ':alert-service:fatJar'
+    dependsOn ':data-processor:fatJar'
+
+    doFirst {
+        delete layout.projectDirectory.dir('artifacts')
+    }
+
+    doLast {
+        copy {
+            from 'parser/build/libs/parser-0.1.0-SNAPSHOT-all.jar'
+            into 'artifacts'
+            rename { 'parser.jar' }
+        }
+
+        copy {
+            from 'filter-service/build/libs/filter-service-1.0-SNAPSHOT-fat.jar'
+            into 'artifacts'
+            rename { 'filter-service.jar' }
+        }
+
+        copy {
+            from 'alert-service/build/libs/alert-service-1.0-SNAPSHOT-fat.jar'
+            into 'artifacts'
+            rename { 'alert-service.jar' }
+        }
+
+        copy {
+            from 'data-processor/build/libs/data-processor-1.0-SNAPSHOT-fat.jar'
+            into 'artifacts'
+            rename { 'data-processor-job.jar' }
+        }
+    }
+}
