@@ -5,6 +5,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import ru.common.dto.OutboxPayload;
 import ru.models.dto.Request;
+import ru.models.dto.Response;
 import ru.persistence.entity.ImpulseFilterEntity;
 
 
@@ -17,4 +18,6 @@ public interface ImpulseFilterMapper {
     Request.ImpulseFilterDto toDto(ImpulseFilterEntity entity);
 
     OutboxPayload.ImpulseFilter toOutboxPayload(Request.ImpulseFilterDto dto);
+
+    Response.ImpulseFilterResponse toResponse(ImpulseFilterEntity entity);
 }

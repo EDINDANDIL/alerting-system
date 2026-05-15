@@ -11,7 +11,6 @@ import ru.tinkoff.kora.database.jdbc.JdbcRepository;
 @Repository
 public interface UserImpulseFiltersRepository extends JdbcRepository {
 
-    // привязать user ↔ impulse (idempotent: PK(user_id, impulse_id) не даст дубликатов)
     @Query("""
            INSERT INTO user_impulse_filters (user_id, impulse_id)
            VALUES (:userId, :impulseId)
@@ -19,14 +18,12 @@ public interface UserImpulseFiltersRepository extends JdbcRepository {
            """)
     UpdateCount subscribe(int userId, long impulseId);
 
-    // отвязать user ↔ impulse
     @Query("""
            DELETE FROM user_impulse_filters
            WHERE user_id = :userId AND impulse_id = :impulseId
            """)
     UpdateCount unsubscribe(int userId, long impulseId);
 
-    // сколько пользователей подписано на фильтр
     @Query("""
            SELECT COUNT(*)
            FROM user_impulse_filters
@@ -34,7 +31,6 @@ public interface UserImpulseFiltersRepository extends JdbcRepository {
            """)
     long countByImpulseId(long impulseId);
 
-    // все фильтры пользователя
     @Query("""
            SELECT user_id, impulse_id, created_at
            FROM user_impulse_filters
@@ -42,7 +38,6 @@ public interface UserImpulseFiltersRepository extends JdbcRepository {
            """)
     List<UserImpulseFilterEntity> findByUserId(int userId);
 
-    // все пользователи конкретного фильтра
     @Query("""
            SELECT user_id, impulse_id, created_at
            FROM user_impulse_filters

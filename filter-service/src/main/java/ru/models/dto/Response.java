@@ -1,19 +1,20 @@
 package ru.models.dto;
 
-import ru.tinkoff.kora.json.common.annotation.Json;
+import ru.common.util.Direction;
 import ru.tinkoff.kora.json.common.annotation.JsonDiscriminatorField;
 import ru.tinkoff.kora.json.common.annotation.JsonDiscriminatorValue;
-import ru.common.util.Direction;
+import ru.tinkoff.kora.json.common.annotation.JsonWriter;
 
 import java.util.List;
 
-@Json
+@JsonWriter
 @JsonDiscriminatorField("action")
-public sealed interface Request {
+public sealed interface Response {
 
-    @Json
+    @JsonWriter
     @JsonDiscriminatorValue("IMPULSE")
-    record ImpulseFilterDto(
+    record ImpulseFilterResponse(
+            long id,
             List<String> exchange,
             List<String> market,
             List<String> blackList,
@@ -22,5 +23,5 @@ public sealed interface Request {
             Direction direction,
             int percent,
             int volume24h
-    ) implements Request {}
+    ) implements Response {}
 }

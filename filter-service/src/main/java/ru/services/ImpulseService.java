@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.common.dto.OutboxCreatedEvent;
 import ru.models.dto.Request;
+import ru.models.dto.Response;
 import ru.models.exceptions.FilterNotFoundException;
 import ru.models.exceptions.UserNotFoundException;
 import ru.models.mappers.impulse.ImpulseFilterMapper;
@@ -17,6 +18,8 @@ import ru.tinkoff.kora.database.common.UpdateCount;
 import ru.common.util.OutboxOperation;
 
 import java.time.OffsetDateTime;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 @Component
 public final class ImpulseService implements FilterService {
@@ -26,50 +29,61 @@ public final class ImpulseService implements FilterService {
     private final OutboxRepository outboxRepository;
     private final ImpulseFilterMapper impulseMapper;
     private final OutboxMapperFacade mapperFacade;
+    private final DBExecutor executor;
     private static final Logger log = LoggerFactory.getLogger(ImpulseService.class);
 
-    public ImpulseService(ImpulseFiltersRepository impFiltersRepo, UserImpulseFiltersRepository userImpFilterRepo, OutboxRepository outboxRepository, ImpulseFilterMapper impulseMapper, OutboxMapperFacade mapperFacade) {
+    public ImpulseService(ImpulseFiltersRepository impFiltersRepo, UserImpulseFiltersRepository userImpFilterRepo, OutboxRepository outboxRepository, ImpulseFilterMapper impulseMapper, OutboxMapperFacade mapperFacade, DBExecutor executor) {
         this.impFiltersRepo = impFiltersRepo;
         this.userImpFilterRepo = userImpFilterRepo;
         this.outboxRepository = outboxRepository;
         this.impulseMapper = impulseMapper;
         this.mapperFacade = mapperFacade;
+        this.executor = executor;
     }
 
     @Override
-    public void subscribe(int userId, Request dto) {
+    public CompletionStage<Response.ImpulseFilterResponse> subscribe(int userId, Request dto) {
+        return CompletableFuture.supplyAsync(
+                () -> subscribe(userId, (Request.ImpulseFilterDto) dto), executor.executor()
+        );
+    }
 
-        Request.ImpulseFilterDto impulseFilterDto = (Request.ImpulseFilterDto) dto;
+    @Override
+    public CompletionStage<Void> unsubscribe(int userId, Request dto) {
+        return CompletableFuture.runAsync(
+                () -> unsubscribe(userId, (Request.ImpulseFilterDto) dto),
+                executor.executor()
+        );
+    }
 
-        impFiltersRepo.getJdbcConnectionFactory().inTx(connection -> {
+    private Response.ImpulseFilterResponse subscribe(int userId, Request.ImpulseFilterDto dto) {
 
+        ImpulseFilterEntity entity = impFiltersRepo.getJdbcConnectionFactory().inTx(connection -> {
             var connectionContext = impFiltersRepo.getJdbcConnectionFactory().currentConnectionContext();
-
             assert connectionContext != null;
             connectionContext.addPostCommitAction(conn ->
-                    log.info("Transaction COMMITTED: user with id {} subscribed to filter {}", userId, impulseFilterDto)
+                    log.info("Transaction COMMITTED: user with id {} subscribed to filter {}", userId, dto)
             );
             connectionContext.addPostRollbackAction((conn, e) ->
                     log.error("Transaction ROLLBACK for user {} due to: {}", userId, e.getMessage(), e)
             );
-
-            ImpulseFilterEntity impulseFilterEntity = impFiltersRepo.findByConfig(impulseMapper.toEntity(impulseFilterDto))
+            ImpulseFilterEntity impulseFilterEntity = impFiltersRepo.findByConfig(impulseMapper.toEntity(dto))
                     .map(f -> {
                         log.info("Filter already exists with id {}, reusing", f.id());
                         return f;
                     })
                     .orElseGet(() -> {
 
-                        ImpulseFilterEntity newImpulseFilterEntity = impulseMapper.toEntity(impulseFilterDto);
+                        ImpulseFilterEntity newImpulseFilterEntity = impulseMapper.toEntity(dto);
                         long newFilterId = impFiltersRepo.insert(newImpulseFilterEntity);
 
                         OutboxCreatedEvent event = new OutboxCreatedEvent(
-                        impulseFilterDto.action(),
-                        OutboxOperation.CREATE,
-                        newFilterId,
-                        userId,
-                        OffsetDateTime.now(),
-                        impulseMapper.toOutboxPayload(impulseFilterDto)
+                                dto.action(),
+                                OutboxOperation.CREATE,
+                                newFilterId,
+                                userId,
+                                OffsetDateTime.now(),
+                                impulseMapper.toOutboxPayload(dto)
                         );
 
                         long eventId = outboxRepository.insert(mapperFacade.asEntity(event));
@@ -77,25 +91,25 @@ public final class ImpulseService implements FilterService {
                         log.info("Created new filter with id {}", newFilterId);
                         log.info("Created new event CREATE with id {}", eventId);
 
-                return new ImpulseFilterEntity(
-                        newFilterId,
-                        newImpulseFilterEntity.exchange(),
-                        newImpulseFilterEntity.market(),
-                        newImpulseFilterEntity.blackList(),
-                        newImpulseFilterEntity.action(),
-                        newImpulseFilterEntity.timeWindow(),
-                        newImpulseFilterEntity.direction(),
-                        newImpulseFilterEntity.percent(),
-                        newImpulseFilterEntity.volume24h()
-                );
-            });
+                        return new ImpulseFilterEntity(
+                                newFilterId,
+                                newImpulseFilterEntity.exchange(),
+                                newImpulseFilterEntity.market(),
+                                newImpulseFilterEntity.blackList(),
+                                newImpulseFilterEntity.action(),
+                                newImpulseFilterEntity.timeWindow(),
+                                newImpulseFilterEntity.direction(),
+                                newImpulseFilterEntity.percent(),
+                                newImpulseFilterEntity.volume24h()
+                        );
+                    });
 
             long newFilterId = impulseFilterEntity.id();
 
             UpdateCount count = userImpFilterRepo.subscribe(userId, newFilterId);
 
             OutboxCreatedEvent event = new OutboxCreatedEvent(
-                    impulseFilterDto.action(),
+                    dto.action(),
                     OutboxOperation.SUBSCRIBE,
                     newFilterId,
                     userId,
@@ -108,12 +122,10 @@ public final class ImpulseService implements FilterService {
 
             return impulseFilterEntity;
         });
+        return impulseMapper.toResponse(entity);
     }
 
-    @Override
-    public void unsubscribe(int userId, Request dto) throws FilterNotFoundException, UserNotFoundException {
-
-        Request.ImpulseFilterDto impulseFilterDto = (Request.ImpulseFilterDto) dto;
+    private void unsubscribe(int userId, Request.ImpulseFilterDto impulseFilterDto) throws FilterNotFoundException, UserNotFoundException {
 
         userImpFilterRepo.getJdbcConnectionFactory().inTx(connection -> {
             var connectionContext = userImpFilterRepo.getJdbcConnectionFactory().currentConnectionContext();
