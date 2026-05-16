@@ -1,6 +1,6 @@
 package ru.util;
 
-import ru.models.dto.Request;
+import ru.models.dto.FilterType;
 import ru.services.FilterService;
 import ru.services.ImpulseService;
 import ru.tinkoff.kora.common.Component;
@@ -14,11 +14,10 @@ public class FilterServiceRegistry {
         this.impulseService = impulseService;
     }
 
-    public FilterService getService(Request req) {
-        return switch (req) {
-            case Request.ImpulseFilterDto dto -> impulseService;
-            default -> throw new IllegalArgumentException("Unknown request type: " + req.getClass());
+    public FilterService getService(FilterType type) {
+        return switch (type) {
+            case IMPULSE -> impulseService;
+            default -> throw new IllegalArgumentException("Unknown request type: " + type.getClass());
         };
     }
-
 }

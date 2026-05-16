@@ -17,22 +17,16 @@ public final class PriceWindow implements Serializable {
     public void add(TradePoint point) {
         long cutoff = point.timestampNs() - windowLengthNs;
 
-        while (!minDeque.isEmpty() && minDeque.getFirst().timestampNs() < cutoff) {
-            minDeque.removeFirst();
-        }
+        while (!minDeque.isEmpty() && minDeque.getFirst().timestampNs() < cutoff) {minDeque.removeFirst();}
 
-        while (!maxDeque.isEmpty() && maxDeque.getFirst().timestampNs() < cutoff) {
-            maxDeque.removeFirst();
-        }
+        while (!maxDeque.isEmpty() && maxDeque.getFirst().timestampNs() < cutoff) {maxDeque.removeFirst();}
 
-        while (!minDeque.isEmpty() && minDeque.getLast().priceRaw() >= point.priceRaw()) {
-            minDeque.removeLast();
-        }
+        while (!minDeque.isEmpty() && minDeque.getLast().priceRaw() >= point.priceRaw()) {minDeque.removeLast();}
+
         minDeque.addLast(point);
 
-        while (!maxDeque.isEmpty() && maxDeque.getLast().priceRaw() <= point.priceRaw()) {
-            maxDeque.removeLast();
-        }
+        while (!maxDeque.isEmpty() && maxDeque.getLast().priceRaw() <= point.priceRaw()) {maxDeque.removeLast();}
+
         maxDeque.addLast(point);
     }
 

@@ -7,6 +7,6 @@ import java.util.concurrent.CompletionStage;
 
 
 public interface FilterService {
-    CompletionStage<Response.ImpulseFilterResponse> subscribe(int userId, Request dto);
-    CompletionStage<Void> unsubscribe(int userId, Request dto);
+    CompletionStage<Response> subscribe(long userId, Request dto);
+    CompletionStage<Void> unsubscribe(long userId, long filterId);
 }

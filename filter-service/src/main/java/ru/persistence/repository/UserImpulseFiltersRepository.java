@@ -16,13 +16,13 @@ public interface UserImpulseFiltersRepository extends JdbcRepository {
            VALUES (:userId, :impulseId)
            ON CONFLICT (user_id, impulse_id) DO NOTHING
            """)
-    UpdateCount subscribe(int userId, long impulseId);
+    UpdateCount subscribe(long userId, long impulseId);
 
     @Query("""
            DELETE FROM user_impulse_filters
            WHERE user_id = :userId AND impulse_id = :impulseId
            """)
-    UpdateCount unsubscribe(int userId, long impulseId);
+    UpdateCount unsubscribe(long userId, long impulseId);
 
     @Query("""
            SELECT COUNT(*)
@@ -36,7 +36,7 @@ public interface UserImpulseFiltersRepository extends JdbcRepository {
            FROM user_impulse_filters
            WHERE user_id = :userId
            """)
-    List<UserImpulseFilterEntity> findByUserId(int userId);
+    List<UserImpulseFilterEntity> findByUserId(long userId);
 
     @Query("""
            SELECT user_id, impulse_id, created_at
