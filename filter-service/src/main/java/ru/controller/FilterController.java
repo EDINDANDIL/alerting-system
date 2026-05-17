@@ -44,6 +44,6 @@ public class FilterController {
             @Path long id) {
 
         FilterService service = filterServiceRegistry.getService(type);
-        return service.unsubscribe(userId, id).thenApply(v -> HttpServerResponse.of(204));
+        return service.unsubscribe(userId, id).thenApply(_ -> HttpServerResponse.of(204));
     }
 }

@@ -5,7 +5,6 @@ import java.util.Optional;
 
 import ru.persistence.entity.ImpulseFilterEntity;
 import ru.tinkoff.kora.database.common.UpdateCount;
-import ru.tinkoff.kora.database.common.annotation.Id;
 import ru.tinkoff.kora.database.common.annotation.Query;
 import ru.tinkoff.kora.database.common.annotation.Repository;
 import ru.tinkoff.kora.database.jdbc.JdbcRepository;
@@ -50,30 +49,18 @@ public interface ImpulseFiltersRepository extends JdbcRepository {
            """)
     Optional<ImpulseFilterEntity> findByConfig(ImpulseFilterEntity entity);
 
-    @Id
     @Query("""
-           INSERT INTO impulse_filters (
-               exchanges,
-               markets,
-               blacklist,
-               action,
-               time_window_sec,
-               direction_code,
-               percent,
-               volume_24h
-           )
-           VALUES (
-               :entity.exchange,
-               :entity.market,
-               :entity.blackList,
-               :entity.action,
-               :entity.timeWindow,
-               :entity.direction,
-               :entity.percent,
-               :entity.volume24h
-           )
-           """)
-    long insert(ImpulseFilterEntity entity);
+         INSERT INTO impulse_filters (
+             exchanges,markets,blacklist,action,
+             time_window_sec,direction_code,percent,volume_24h
+         )
+         VALUES (
+                 :entity.exchange,:entity.market,:entity.blackList,:entity.action,
+                 :entity.timeWindow,:entity.direction,:entity.percent,:entity.volume24h
+         )
+         RETURNING id,exchanges,markets,blacklist,action,time_window_sec,direction_code,percent,volume_24h
+         """)
+    ImpulseFilterEntity insert(ImpulseFilterEntity entity);
 
     @Query("""
            DELETE FROM impulse_filters

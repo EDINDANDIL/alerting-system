@@ -10,9 +10,7 @@ public final class DirectionColumnMapper implements JdbcResultColumnMapper<Direc
     @Override
     public Direction apply(ResultSet row, int index) throws SQLException {
         short code = row.getShort(index);
-        if (row.wasNull()) {
-            return null;
-        }
+        if (row.wasNull()) return null;
         return Direction.fromCode(code);
     }
 }
