@@ -44,7 +44,8 @@ public final class ImpulseService implements FilterService {
     @Override
     public CompletionStage<Response> subscribe(long userId, Request dto) {
         return CompletableFuture.supplyAsync(
-                () -> performSubscribe(userId, (Request.ImpulseFilterDto) dto), executor.executor()
+                () -> performSubscribe(userId, (Request.ImpulseFilterDto) dto),
+                executor.executor()
         );
     }
 

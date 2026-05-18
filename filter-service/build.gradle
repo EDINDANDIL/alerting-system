@@ -48,27 +48,28 @@ dependencies {
     implementation project(':filter-outbox-common')
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.mockito:mockito-core:5.18.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     koraBom platform("ru.tinkoff.kora:kora-parent:1.2.12")
-    annotationProcessor "ru.tinkoff.kora:annotation-processors"
-    annotationProcessor "org.mapstruct:mapstruct-processor:1.5.5.Final"
     annotationProcessor "ru.tinkoff.kora:json-annotation-processor"
-    implementation "org.mapstruct:mapstruct:1.5.5.Final"
-    implementation "ru.tinkoff.kora:database-jdbc"
-    implementation "org.postgresql:postgresql:42.7.3"
+    annotationProcessor "org.mapstruct:mapstruct-processor:1.5.5.Final"
 
+    annotationProcessor "ru.tinkoff.kora:annotation-processors"
     implementation "ru.tinkoff.kora:http-server-undertow"
-    implementation "ru.tinkoff.kora:json-module"
     implementation "ru.tinkoff.kora:config-hocon"
-    implementation "ru.tinkoff.kora:database-jdbc"
     implementation "ru.tinkoff.kora:kafka"
-
-    implementation "org.postgresql:postgresql:42.7.3"
     implementation "ru.tinkoff.kora:logging-logback"
     implementation "ru.tinkoff.kora:jackson-module"
     implementation "ru.tinkoff.kora:scheduling-jdk"
+    implementation "ru.tinkoff.kora:database-jdbc"
 
     implementation "org.flywaydb:flyway-core:10.17.0"
     implementation "org.flywaydb:flyway-database-postgresql:10.17.0"
+    implementation "org.postgresql:postgresql:42.7.3"
+
+    implementation "ru.tinkoff.kora:json-module"
+    implementation "org.mapstruct:mapstruct:1.5.5.Final"
 }
 
 test {

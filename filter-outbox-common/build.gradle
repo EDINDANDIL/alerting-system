@@ -22,17 +22,24 @@ configurations {
 }
 
 dependencies {
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
-    implementation 'org.postgresql:postgresql:42.7.3'
+
+    annotationProcessor "ru.tinkoff.kora:annotation-processors"
+    annotationProcessor "org.mapstruct:mapstruct-processor:1.5.5.Final"
+
     implementation platform('ru.tinkoff.kora:kora-parent:1.2.12')
+    koraBom platform('ru.tinkoff.kora:kora-parent:1.2.12')
+
     implementation 'ru.tinkoff.kora:database-common'
     implementation "ru.tinkoff.kora:database-jdbc"
     implementation "ru.tinkoff.kora:json-module"
 
-    koraBom platform('ru.tinkoff.kora:kora-parent:1.2.12')
-    annotationProcessor "ru.tinkoff.kora:annotation-processors"
-    annotationProcessor "org.mapstruct:mapstruct-processor:1.5.5.Final"
     implementation "org.mapstruct:mapstruct:1.5.5.Final"
+    implementation 'org.apache.kafka:kafka-clients:3.9.1'
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.19.2"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.2"
+
+    implementation 'org.postgresql:postgresql:42.7.3'
+
 }
 
 test {

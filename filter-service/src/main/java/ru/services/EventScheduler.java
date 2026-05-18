@@ -17,14 +17,14 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Component
-public class KafkaService {
+public class EventScheduler {
 
-    private static final Logger log = LoggerFactory.getLogger(KafkaService.class);
+    private static final Logger log = LoggerFactory.getLogger(EventScheduler.class);
     private final OutboxRepository repository;
     private final Publisher publisher;
     private final OutboxMapperFacade facade;
 
-    public KafkaService(OutboxRepository repository, Publisher publisher, OutboxMapperFacade facade) {
+    public EventScheduler(OutboxRepository repository, Publisher publisher, OutboxMapperFacade facade) {
         this.repository = repository;
         this.publisher = publisher;
         this.facade = facade;

@@ -10,6 +10,5 @@ public interface EventOutboxMapper {
 
     @Mapping(target = "eventId", ignore = true)
     FilterOutboxEntity asEntity(OutboxCreatedEvent event);
-
     OutboxCreatedEvent asEvent(FilterOutboxEntity entity);
 }
