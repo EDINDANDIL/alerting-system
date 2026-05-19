@@ -36,7 +36,7 @@ public interface UserImpulseFiltersRepository extends JdbcRepository {
            FROM user_impulse_filters
            WHERE user_id = :userId
            """)
-    List<UserImpulseFilterEntity> findByUserId(long userId);
+    List<UserImpulseFilterEntity> findFiltersByUserId(long userId);
 
     @Query("""
            SELECT user_id, impulse_id, created_at

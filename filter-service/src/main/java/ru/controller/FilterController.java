@@ -15,6 +15,8 @@ import ru.tinkoff.kora.http.server.common.annotation.HttpController;
 import ru.tinkoff.kora.json.common.annotation.Json;
 import ru.util.FilterServiceRegistry;
 
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 @Component
@@ -22,15 +24,18 @@ import java.util.concurrent.CompletionStage;
 public class FilterController {
 
     private final FilterServiceRegistry filterServiceRegistry;
-    public FilterController(FilterServiceRegistry filterServiceRegistry) {this.filterServiceRegistry = filterServiceRegistry;}
+
+    public FilterController(FilterServiceRegistry filterServiceRegistry) {
+        this.filterServiceRegistry = filterServiceRegistry;
+    }
 
     @Json
     @HttpRoute(method = HttpMethod.POST, path = "/api/filters/{type}")
     public CompletionStage<HttpResponseEntity<Response>> subscribe(
             @Json Request dto,
             @Header("X-user-id") long userId,
-            @Path FilterType type) {
-
+            @Path FilterType type
+    ) {
         FilterService service = filterServiceRegistry.getService(type);
 
         return service.subscribe(userId, dto)
@@ -41,9 +46,32 @@ public class FilterController {
     public CompletionStage<HttpServerResponse> unsubscribe(
             @Header("X-user-id") long userId,
             @Path FilterType type,
-            @Path long id) {
-
+            @Path long id
+    ) {
         FilterService service = filterServiceRegistry.getService(type);
-        return service.unsubscribe(userId, id).thenApply(_ -> HttpServerResponse.of(204));
+
+        return service.unsubscribe(userId, id)
+                .thenApply(ignored -> HttpServerResponse.of(204));
+    }
+
+    @Json
+    @HttpRoute(method = HttpMethod.GET, path = "/api/filters")
+    public CompletionStage<HttpResponseEntity<List<Response>>> getAllFilters(
+            @Header("X-user-id") long userId
+    ) {
+        List<CompletionStage<List<Response>>> stages = filterServiceRegistry.allFilterServices()
+                .stream()
+                .map(service -> service.findFiltersByUserId(userId))
+                .toList();
+
+        CompletableFuture<?>[] futures = stages.stream()
+                .map(CompletionStage::toCompletableFuture)
+                .toArray(CompletableFuture[]::new);
+
+        return CompletableFuture.allOf(futures)
+                .thenApply(ignored -> stages.stream()
+                        .flatMap(stage -> stage.toCompletableFuture().join().stream())
+                        .toList())
+                .thenApply(filters -> HttpResponseEntity.of(200, filters));
     }
 }

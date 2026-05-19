@@ -118,7 +118,7 @@ class ImpulseServiceTest {
     void unsubscribe_removesSubscriptionAndWritesOnlyUnsubscribeWhenSubscribersRemain() {
         ImpulseFilterEntity existing = entity(FILTER_ID);
 
-        when(filtersRepository.findById(FILTER_ID)).thenReturn(Optional.of(existing));
+        when(filtersRepository.findFilterById(FILTER_ID)).thenReturn(Optional.of(existing));
         when(userFiltersRepository.unsubscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(1));
         when(userFiltersRepository.countByImpulseId(FILTER_ID)).thenReturn(2L);
         when(outboxRepository.insert(any())).thenReturn(200L);
@@ -136,7 +136,7 @@ class ImpulseServiceTest {
     void unsubscribe_deletesFilterAndWritesDeleteWhenLastSubscriberRemoved() {
         ImpulseFilterEntity existing = entity(FILTER_ID);
 
-        when(filtersRepository.findById(FILTER_ID)).thenReturn(Optional.of(existing));
+        when(filtersRepository.findFilterById(FILTER_ID)).thenReturn(Optional.of(existing));
         when(userFiltersRepository.unsubscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(1));
         when(userFiltersRepository.countByImpulseId(FILTER_ID)).thenReturn(0L);
         when(filtersRepository.deleteById(FILTER_ID)).thenReturn(new UpdateCount(1));
@@ -154,7 +154,7 @@ class ImpulseServiceTest {
 
     @Test
     void unsubscribe_failsWhenFilterDoesNotExist() {
-        when(filtersRepository.findById(FILTER_ID)).thenReturn(Optional.empty());
+        when(filtersRepository.findFilterById(FILTER_ID)).thenReturn(Optional.empty());
 
         CompletionException error = assertThrows(
                 CompletionException.class,
@@ -168,7 +168,7 @@ class ImpulseServiceTest {
 
     @Test
     void unsubscribe_failsWhenUserWasNotSubscribed() {
-        when(filtersRepository.findById(FILTER_ID)).thenReturn(Optional.of(entity(FILTER_ID)));
+        when(filtersRepository.findFilterById(FILTER_ID)).thenReturn(Optional.of(entity(FILTER_ID)));
         when(userFiltersRepository.unsubscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(0));
 
         CompletionException error = assertThrows(
@@ -182,7 +182,7 @@ class ImpulseServiceTest {
 
     @Test
     void unsubscribe_failsWhenLastFilterDeleteDidNotAffectRows() {
-        when(filtersRepository.findById(FILTER_ID)).thenReturn(Optional.of(entity(FILTER_ID)));
+        when(filtersRepository.findFilterById(FILTER_ID)).thenReturn(Optional.of(entity(FILTER_ID)));
         when(userFiltersRepository.unsubscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(1));
         when(userFiltersRepository.countByImpulseId(FILTER_ID)).thenReturn(0L);
         when(filtersRepository.deleteById(FILTER_ID)).thenReturn(new UpdateCount(0));

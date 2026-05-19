@@ -10,15 +10,22 @@ import java.io.IOException;
 public final class FilterEventDeserializer
         implements DeserializationSchema<OutboxCreatedEvent> {
 
-    private final OutboxCreatedEventDeserializer deserializer = new OutboxCreatedEventDeserializer();
+    private transient OutboxCreatedEventDeserializer deserializer;
 
     @Override
     public OutboxCreatedEvent deserialize(byte[] message) throws IOException {
         try {
-            return deserializer.deserialize("filter-topic", message);
+            return deserializer().deserialize("filter-topic", message);
         } catch (Exception e) {
             throw new IOException("Failed to deserialize OutboxCreatedEvent", e);
         }
+    }
+
+    private OutboxCreatedEventDeserializer deserializer() {
+        if (deserializer == null) {
+            deserializer = new OutboxCreatedEventDeserializer();
+        }
+        return deserializer;
     }
 
     @Override

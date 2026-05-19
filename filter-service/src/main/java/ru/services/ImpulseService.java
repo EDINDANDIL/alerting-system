@@ -18,6 +18,7 @@ import ru.tinkoff.kora.database.common.UpdateCount;
 import ru.common.util.OutboxOperation;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -57,7 +58,18 @@ public final class ImpulseService implements FilterService {
         );
     }
 
-    private Response.ImpulseFilterResponse performSubscribe(long userId, Request.ImpulseFilterDto dto) {
+    @Override
+    public CompletableFuture<List<Response>> findFiltersByUserId(long id) {
+        return CompletableFuture.supplyAsync(
+                () -> impFiltersRepo.findFiltersByUserId(id).stream()
+                            .map(impulseMapper::toResponse)
+                            .map(Response.class::cast)
+                            .toList(),
+                executor.executor()
+        );
+    }
+
+    private Response performSubscribe(long userId, Request.ImpulseFilterDto dto) {
 
         ImpulseFilterEntity entity = impFiltersRepo.getJdbcConnectionFactory().inTx(_ -> {
 
@@ -131,7 +143,7 @@ public final class ImpulseService implements FilterService {
                     log.error("Transaction ROLLBACK for user {} due to: {}", userId, e.getMessage(), e)
             );
 
-            ImpulseFilterEntity impulseFilterEntity = impFiltersRepo.findById(filterId)
+            ImpulseFilterEntity impulseFilterEntity = impFiltersRepo.findFilterById(filterId)
                     .orElseThrow(() -> new FilterNotFoundException("Filter with current configuration not found"));
 
             UpdateCount updateCount = userImpFilterRepo.unsubscribe(userId, impulseFilterEntity.id());

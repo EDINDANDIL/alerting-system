@@ -173,23 +173,23 @@ services:
       kafka-init:
         condition: service_completed_successfully
 
-  parser:
-    image: eclipse-temurin:25-jre-alpine
-    container_name: alerting-parser
-    command: [ "java", "-jar", "/app/parser.jar" ]
-    ports:
-      - "9080:9080"
-    environment:
-      KORA_CONFIG_APPLICATION: "application.conf"
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
-      JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
-    volumes:
-      - ./artifacts/parser.jar:/app/parser.jar:ro
-    networks:
-      - alyarma
-    depends_on:
-      kafka-init:
-        condition: service_completed_successfully
+#  parser:
+#    image: eclipse-temurin:25-jre-alpine
+#    container_name: alerting-parser
+#    command: [ "java", "-jar", "/app/parser.jar" ]
+#    ports:
+#      - "9080:9080"
+#    environment:
+#      KORA_CONFIG_APPLICATION: "application.conf"
+#      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+#      JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
+#    volumes:
+#      - ./artifacts/parser.jar:/app/parser.jar:ro
+#    networks:
+#      - alyarma
+#    depends_on:
+#      kafka-init:
+#        condition: service_completed_successfully
 
   alert-service:
     image: eclipse-temurin:25-jre-alpine
@@ -209,6 +209,36 @@ services:
     depends_on:
       kafka-init:
         condition: service_completed_successfully
+
+  cxet-kafka-service:
+    build:
+      context: ./templates/CppService/CXETCPP
+      dockerfile: kafka/Dockerfile
+    image: cxetcpp-kafka-service:local
+    container_name: cxet-kafka-service
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      CXET_GROUP_ID: "cxet-kafka-service"
+      CXET_COMMAND_TOPIC: "command-topic"
+      CXET_REPLY_TOPIC: "cxet.replies"
+      CXET_TRADES_TOPIC: "trades-topic"
+    command:
+      - --bootstrap
+      - kafka:9092
+      - --group-id
+      - cxet-kafka-service
+      - --command-topic
+      - command-topic
+      - --reply-topic
+      - cxet.replies
+      - --trades-topic
+      - trades-topic
+    networks:
+      - alyarma
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
 
 
 

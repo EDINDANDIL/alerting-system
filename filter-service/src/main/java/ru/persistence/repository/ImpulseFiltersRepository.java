@@ -25,7 +25,7 @@ public interface ImpulseFiltersRepository extends JdbcRepository {
            FROM impulse_filters
            WHERE id = :id
            """)
-    Optional<ImpulseFilterEntity> findById(long id);
+    Optional<ImpulseFilterEntity> findFilterById(long id);
 
     @Query("""
            SELECT id,
@@ -48,6 +48,22 @@ public interface ImpulseFiltersRepository extends JdbcRepository {
             AND volume_24h      = :entity.volume24h
            """)
     Optional<ImpulseFilterEntity> findByConfig(ImpulseFilterEntity entity);
+
+    @Query("""
+         SELECT f.id,
+                f.exchanges,
+                f.markets,
+                f.blacklist,
+                f.action,
+                f.time_window_sec,
+                f.direction_code,
+                f.percent,
+                f.volume_24h
+         FROM impulse_filters f
+         JOIN user_impulse_filters uf ON uf.impulse_id = f.id
+         WHERE uf.user_id = :userId
+         """)
+    List<ImpulseFilterEntity> findFiltersByUserId(long userId);
 
     @Query("""
          INSERT INTO impulse_filters (

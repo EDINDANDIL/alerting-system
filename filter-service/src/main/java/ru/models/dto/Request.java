@@ -18,9 +18,9 @@ public sealed interface Request {
             List<String> market,
             List<String> blackList,
             String action,
-            int timeWindow,
+            long timeWindow,
             Direction direction,
             int percent,
-            int volume24h
+            long volume24h
     ) implements Request {}
 }
