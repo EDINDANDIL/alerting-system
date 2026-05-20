@@ -1,6 +1,6 @@
 package ru.common.mappers.outbox;
 
-import ru.common.dto.OutboxCreatedEvent;
+import ru.common.dto.FilterCreatedEvent;
 import ru.common.persistence.entity.FilterOutboxEntity;
 import ru.tinkoff.kora.common.Component;
 
@@ -12,11 +12,11 @@ public final class OutboxMapperFacade {
         this.eventOutboxMapper = eventOutboxMapper;
     }
 
-    public FilterOutboxEntity asEntity(OutboxCreatedEvent event) {
+    public FilterOutboxEntity asEntity(FilterCreatedEvent event) {
         return eventOutboxMapper.asEntity(event);
     }
 
-    public OutboxCreatedEvent asEvent(FilterOutboxEntity entity) {
+    public FilterCreatedEvent asEvent(FilterOutboxEntity entity) {
         return eventOutboxMapper.asEvent(entity);
     }
 }

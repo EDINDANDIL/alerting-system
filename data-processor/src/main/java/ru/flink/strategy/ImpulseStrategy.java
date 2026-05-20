@@ -1,12 +1,12 @@
 package ru.flink.strategy;
 
 import ru.common.util.Direction;
-import ru.flink.model.RuntimeFilter;
-import ru.flink.state.PriceWindow;
+import ru.flink.models.ImpulseRuntimeFilter;
+import ru.flink.state.SlidingPriceWindow;
 
 public final class ImpulseStrategy {
 
-    public boolean trigger(PriceWindow window, RuntimeFilter filter) {
+    public boolean trigger(SlidingPriceWindow window, ImpulseRuntimeFilter filter) {
 
         long min = window.min();
         long max = window.max();
@@ -14,14 +14,18 @@ public final class ImpulseStrategy {
         if (min == 0L) return false;
 
         boolean isUp = window.isUpMove();
-        boolean amplitude = max * 100L >= min * (100L + filter.payload().percent());
+
+        long percent = filter.payload().percent();
+
+        boolean upAmplitude = max * 100L >= min * (100L + percent);
+        boolean downAmplitude = min * 100L <= max * (100L - percent);
 
         Direction direction = filter.payload().direction();
 
         return switch (direction) {
-            case UP -> isUp && amplitude;
-            case DOWN -> !isUp && amplitude;
-            case BOTH -> amplitude;
+            case UP -> isUp && upAmplitude;
+            case DOWN -> !isUp && downAmplitude;
+            case BOTH -> upAmplitude || downAmplitude;
         };
     }
 }

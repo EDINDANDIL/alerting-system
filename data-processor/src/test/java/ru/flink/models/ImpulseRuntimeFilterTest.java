@@ -1,4 +1,4 @@
-package ru.flink.model;
+package ru.flink.models;
 
 import org.junit.jupiter.api.Test;
 import ru.common.dto.OutboxPayload;
@@ -8,13 +8,13 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class RuntimeFilterTest {
+class ImpulseRuntimeFilterTest {
 
     @Test
     void subscribe_addsSubscriberAndKeepsOriginalUnchanged() {
-        RuntimeFilter original = filter(Set.of(1L));
+        ImpulseRuntimeFilter original = filter(Set.of(1L));
 
-        RuntimeFilter updated = original.subscribe(2L);
+        ImpulseRuntimeFilter updated = original.subscribe(2L);
 
         assertEquals(Set.of(1L), original.subscribers());
         assertEquals(Set.of(1L, 2L), updated.subscribers());
@@ -24,9 +24,9 @@ class RuntimeFilterTest {
 
     @Test
     void unsubscribe_removesSubscriberAndKeepsOriginalUnchanged() {
-        RuntimeFilter original = filter(Set.of(1L, 2L));
+        ImpulseRuntimeFilter original = filter(Set.of(1L, 2L));
 
-        RuntimeFilter updated = original.unsubscribe(2L);
+        ImpulseRuntimeFilter updated = original.unsubscribe(2L);
 
         assertEquals(Set.of(1L, 2L), original.subscribers());
         assertEquals(Set.of(1L), updated.subscribers());
@@ -34,15 +34,15 @@ class RuntimeFilterTest {
 
     @Test
     void subscribe_existingSubscriber_isIdempotent() {
-        RuntimeFilter original = filter(Set.of(1L));
+        ImpulseRuntimeFilter original = filter(Set.of(1L));
 
-        RuntimeFilter updated = original.subscribe(1L);
+        ImpulseRuntimeFilter updated = original.subscribe(1L);
 
         assertEquals(Set.of(1L), updated.subscribers());
     }
 
-    private static RuntimeFilter filter(Set<Long> subscribers) {
-        return new RuntimeFilter(10L, payload(), subscribers);
+    private static ImpulseRuntimeFilter filter(Set<Long> subscribers) {
+        return new ImpulseRuntimeFilter(10L, payload(), subscribers);
     }
 
     private static OutboxPayload.ImpulseFilter payload() {

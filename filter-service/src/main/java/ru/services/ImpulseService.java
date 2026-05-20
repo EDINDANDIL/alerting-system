@@ -2,7 +2,7 @@ package ru.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.common.dto.OutboxCreatedEvent;
+import ru.common.dto.FilterCreatedEvent;
 import ru.models.dto.Request;
 import ru.models.dto.Response;
 import ru.models.exceptions.FilterNotFoundException;
@@ -90,7 +90,7 @@ public final class ImpulseService implements FilterService {
 
                         ImpulseFilterEntity newImpulseFilterEntity = impFiltersRepo.insert(impulseMapper.toEntity(dto));
 
-                        OutboxCreatedEvent event = new OutboxCreatedEvent(
+                        FilterCreatedEvent event = new FilterCreatedEvent(
                                 dto.action(),
                                 OutboxOperation.CREATE,
                                 newImpulseFilterEntity.id(),
@@ -113,7 +113,7 @@ public final class ImpulseService implements FilterService {
             UpdateCount count = userImpFilterRepo.subscribe(userId, newFilterId);
 
             if (count.value() > 0) {
-                OutboxCreatedEvent event = new OutboxCreatedEvent(
+                FilterCreatedEvent event = new FilterCreatedEvent(
                         dto.action(),
                         OutboxOperation.SUBSCRIBE,
                         newFilterId,
@@ -153,7 +153,7 @@ public final class ImpulseService implements FilterService {
                 throw new UserNotFoundException("User with current id not found or not subscribed to this filter");
             }
 
-            OutboxCreatedEvent unsubEvent = new OutboxCreatedEvent(
+            FilterCreatedEvent unsubEvent = new FilterCreatedEvent(
                     impulseFilterEntity.action(),
                     OutboxOperation.UNSUBSCRIBE,
                     filterId,
@@ -173,7 +173,7 @@ public final class ImpulseService implements FilterService {
 
                 if (deleteResult.value() == 0) throw new FilterNotFoundException("Filter not found during delete");
 
-                OutboxCreatedEvent deleteEvent = new OutboxCreatedEvent(
+                FilterCreatedEvent deleteEvent = new FilterCreatedEvent(
                         impulseFilterEntity.action(),
                         OutboxOperation.DELETE,
                         filterId,

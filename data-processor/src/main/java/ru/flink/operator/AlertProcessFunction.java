@@ -7,14 +7,14 @@ import org.apache.flink.api.common.state.ReadOnlyBroadcastState;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction;
 import org.apache.flink.util.Collector;
-import ru.common.dto.OutboxCreatedEvent;
+import ru.common.dto.AlertCreatedEvent;
+import ru.common.dto.FilterCreatedEvent;
 import ru.common.dto.OutboxPayload;
-import ru.flink.model.AlertEvent;
-import ru.flink.model.RuntimeFilter;
-import ru.flink.model.KeyedTradeTick;
-import ru.flink.state.PriceWindow;
+import ru.flink.models.ImpulseRuntimeFilter;
+import ru.flink.models.KeyedTradeTick;
+import ru.flink.state.SlidingPriceWindow;
 import ru.flink.strategy.ImpulseStrategy;
-import ru.flink.model.TradePoint;
+import ru.flink.models.TradePoint;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,25 +26,25 @@ import java.util.Set;
 public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
         String,
         KeyedTradeTick,
-        OutboxCreatedEvent,
-        AlertEvent> {
+        FilterCreatedEvent,
+        AlertCreatedEvent> {
 
-    private final MapStateDescriptor<Long, RuntimeFilter> filtersDescriptor;
+    private final MapStateDescriptor<Long, ImpulseRuntimeFilter> filtersDescriptor;
 
-    private transient MapState<Long, PriceWindow> windows;
+    private transient MapState<Long, SlidingPriceWindow> windows;
     private transient ImpulseStrategy impulseStrategy;
 
-    public AlertProcessFunction(MapStateDescriptor<Long, RuntimeFilter> filtersDescriptor) {
+    public AlertProcessFunction(MapStateDescriptor<Long, ImpulseRuntimeFilter> filtersDescriptor) {
         this.filtersDescriptor = filtersDescriptor;
     }
 
     @Override
     public void open(OpenContext openContext) {
-        MapStateDescriptor<Long, PriceWindow> windowsDescriptor =
+        MapStateDescriptor<Long, SlidingPriceWindow> windowsDescriptor =
                 new MapStateDescriptor<>(
                         "windows",
                         Long.class,
-                        PriceWindow.class
+                        SlidingPriceWindow.class
                 );
 
         windows = getRuntimeContext().getMapState(windowsDescriptor);
@@ -53,11 +53,11 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
 
     @Override
     public void processBroadcastElement(
-            OutboxCreatedEvent event,
+            FilterCreatedEvent event,
             Context ctx,
-            Collector<AlertEvent> out
+            Collector<AlertCreatedEvent> out
     ) throws Exception {
-        BroadcastState<Long, RuntimeFilter> filters =
+        BroadcastState<Long, ImpulseRuntimeFilter> filters =
                 ctx.getBroadcastState(filtersDescriptor);
 
         switch (event.operation()) {
@@ -67,7 +67,7 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
                 if (event.payload() instanceof OutboxPayload.ImpulseFilter payload) {
                     filters.put(
                             event.filterId(),
-                            new RuntimeFilter(event.filterId(), payload, Set.of())
+                            new ImpulseRuntimeFilter(event.filterId(), payload, Set.of())
                     );
                 }
             }
@@ -77,7 +77,7 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
 
 
             case SUBSCRIBE -> {
-                RuntimeFilter old = filters.get(event.filterId());
+                ImpulseRuntimeFilter old = filters.get(event.filterId());
                 if (old != null) {
                     filters.put(event.filterId(), old.subscribe(event.userId()));
                 }
@@ -85,7 +85,7 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
 
 
             case UNSUBSCRIBE -> {
-                RuntimeFilter old = filters.get(event.filterId());
+                ImpulseRuntimeFilter old = filters.get(event.filterId());
                 if (old != null) {
                     filters.put(event.filterId(), old.unsubscribe(event.userId()));
                 }
@@ -99,15 +99,15 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
     public void processElement(
             KeyedTradeTick tick,
             ReadOnlyContext ctx,
-            Collector<AlertEvent> out
+            Collector<AlertCreatedEvent> out
     ) throws Exception {
-        ReadOnlyBroadcastState<Long, RuntimeFilter> filters =
+        ReadOnlyBroadcastState<Long, ImpulseRuntimeFilter> filters =
                 ctx.getBroadcastState(filtersDescriptor);
 
-        Map<Long, List<RuntimeFilter>> filtersByWindow = new HashMap<>();
+        Map<Long, List<ImpulseRuntimeFilter>> filtersByWindow = new HashMap<>();
 
-        for (Map.Entry<Long, RuntimeFilter> entry : filters.immutableEntries()) {
-            RuntimeFilter filter = entry.getValue();
+        for (Map.Entry<Long, ImpulseRuntimeFilter> entry : filters.immutableEntries()) {
+            ImpulseRuntimeFilter filter = entry.getValue();
 
             if (filter.subscribers().isEmpty()) continue;
 
@@ -122,21 +122,22 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
                     .add(filter);
         }
 
-        for (Map.Entry<Long, List<RuntimeFilter>> entry : filtersByWindow.entrySet()) {
+        for (Map.Entry<Long, List<ImpulseRuntimeFilter>> entry : filtersByWindow.entrySet()) {
             long windowNs = entry.getKey();
 
-            PriceWindow window = windows.get(windowNs);
+            SlidingPriceWindow window = windows.get(windowNs);
 
-            if (window == null) window = new PriceWindow(windowNs);
+            if (window == null) window = new SlidingPriceWindow(windowNs);
 
             window.add(new TradePoint(tick.timestampNs(), tick.price()));
             windows.put(windowNs, window);
 
-            for (RuntimeFilter filter : entry.getValue()) {
+            for (ImpulseRuntimeFilter filter : entry.getValue()) {
 
                 if (!impulseStrategy.trigger(window, filter)) continue;
 
-                out.collect(new AlertEvent(
+                out.collect(new AlertCreatedEvent(
+                        filter.filterId(),
                         filter.subscribers(),
                         filter.payload().exchange(),
                         filter.payload().market(),

@@ -7,7 +7,7 @@ import ru.tinkoff.kora.json.common.annotation.Json;
 import java.time.OffsetDateTime;
 
 @Json
-public record OutboxCreatedEvent(
+public record FilterCreatedEvent(
         String action,
         OutboxOperation operation,
         long filterId,

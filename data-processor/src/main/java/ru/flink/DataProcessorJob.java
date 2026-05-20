@@ -11,10 +11,10 @@ import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.common.dto.OutboxCreatedEvent;
-import ru.flink.model.AlertEvent;
-import ru.flink.model.RuntimeFilter;
-import ru.flink.model.KeyedTradeTick;
+import ru.common.dto.AlertCreatedEvent;
+import ru.common.dto.FilterCreatedEvent;
+import ru.flink.models.ImpulseRuntimeFilter;
+import ru.flink.models.KeyedTradeTick;
 import ru.flink.operator.AlertProcessFunction;
 import ru.flink.serde.AlertEventKafkaSerializer;
 import ru.flink.serde.FilterEventDeserializer;
@@ -43,7 +43,7 @@ public final class DataProcessorJob {
                 .setDeserializer(new TradeTickKafkaDeserializer())
                 .build();
 
-        KafkaSource<OutboxCreatedEvent> filtersSource = KafkaSource.<OutboxCreatedEvent>builder()
+        KafkaSource<FilterCreatedEvent> filtersSource = KafkaSource.<FilterCreatedEvent>builder()
                 .setBootstrapServers(brokers)
                 .setTopics(FILTER_TOPIC)
                 .setGroupId("flink-data-processor-filters")
@@ -51,17 +51,17 @@ public final class DataProcessorJob {
                 .setValueOnlyDeserializer(new FilterEventDeserializer())
                 .build();
 
-        KafkaSink<AlertEvent> sink = KafkaSink.<AlertEvent>builder()
+        KafkaSink<AlertCreatedEvent> sink = KafkaSink.<AlertCreatedEvent>builder()
                 .setBootstrapServers(brokers)
                 .setRecordSerializer(new AlertEventKafkaSerializer("alert-topic"))
                 .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .build();
 
-        MapStateDescriptor<Long, RuntimeFilter> filtersDescriptor =
+        MapStateDescriptor<Long, ImpulseRuntimeFilter> filtersDescriptor =
                 new MapStateDescriptor<>(
                         "filters",
                         Long.class,
-                        RuntimeFilter.class
+                        ImpulseRuntimeFilter.class
                 );
 
         KeyedStream<KeyedTradeTick, String> trades = env
@@ -74,7 +74,7 @@ public final class DataProcessorJob {
                 })
                 .keyBy(KeyedTradeTick::symbol);
 
-        BroadcastStream<OutboxCreatedEvent> filters = env
+        BroadcastStream<FilterCreatedEvent> filters = env
                 .fromSource(filtersSource, WatermarkStrategy.noWatermarks(), "filters-source")
                 .name("read-filters")
                 .map(filter -> {

@@ -3,7 +3,7 @@ package ru.services;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.common.dto.OutboxCreatedEvent;
+import ru.common.dto.FilterCreatedEvent;
 import ru.common.mappers.outbox.OutboxMapperFacade;
 import ru.common.persistence.entity.FilterOutboxEntity;
 import ru.persistence.repository.OutboxRepository;
@@ -39,9 +39,9 @@ public class EventScheduler {
 
             for (FilterOutboxEntity entity : entities) {
                 long id = entity.eventId();
-                OutboxCreatedEvent event = facade.asEvent(entity);
+                FilterCreatedEvent event = facade.asEvent(entity);
                 String key = entity.action() + ":" + entity.filterId();
-                ProducerRecord<String, OutboxCreatedEvent> record = new ProducerRecord<>(
+                ProducerRecord<String, FilterCreatedEvent> record = new ProducerRecord<>(
                         "filter-topic",
                         key,
                         event

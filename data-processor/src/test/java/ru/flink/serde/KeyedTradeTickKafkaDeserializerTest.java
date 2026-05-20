@@ -3,7 +3,7 @@ package ru.flink.serde;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.apache.flink.util.Collector;
-import ru.flink.model.KeyedTradeTick;
+import ru.flink.models.KeyedTradeTick;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

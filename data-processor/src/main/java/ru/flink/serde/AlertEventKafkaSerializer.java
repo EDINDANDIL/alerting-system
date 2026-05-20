@@ -3,47 +3,32 @@ package ru.flink.serde;
 import org.apache.flink.api.common.serialization.SerializationSchema.InitializationContext;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import ru.flink.model.AlertEvent;
-import ru.flink.model.$AlertEvent_JsonWriter;
-import ru.tinkoff.kora.json.common.JsonWriter;
-import ru.tinkoff.kora.json.module.JsonModule;
+import ru.common.dto.AlertCreatedEvent;
+import ru.common.mappers.serde.AlertCreatedEventSerializer;
 
 import java.nio.charset.StandardCharsets;
 
-// TODO вынести в common
 public final class AlertEventKafkaSerializer
-        implements KafkaRecordSerializationSchema<AlertEvent> {
+        implements KafkaRecordSerializationSchema<AlertCreatedEvent> {
 
     private final String topic;
-    private transient JsonWriter<AlertEvent> writer;
+    private transient AlertCreatedEventSerializer serializer;
 
     public AlertEventKafkaSerializer(String topic) {this.topic = topic;}
 
     @Override
     public void open(InitializationContext context, KafkaSinkContext sinkContext) {
-        JsonModule json = new JsonModule() {};
-
-        var longWriter = json.longJsonWriter();
-        var stringWriter = json.stringJsonWriter();
-
-        var longSetWriter = json.setJsonWriterFactory(longWriter);
-        var stringSetWriter = json.setJsonWriterFactory(stringWriter);
-
-        writer = new $AlertEvent_JsonWriter(
-                longSetWriter,
-                stringSetWriter,
-                stringSetWriter
-        );
+        serializer = new AlertCreatedEventSerializer();
     }
 
     @Override
     public ProducerRecord<byte[], byte[]> serialize(
-            AlertEvent event,
+            AlertCreatedEvent event,
             KafkaSinkContext context,
             Long timestamp
     ) {
         byte[] key = event.symbol().getBytes(StandardCharsets.UTF_8);
-        byte[] value = writer.toStringUnchecked(event).getBytes(StandardCharsets.UTF_8);
+        byte[] value = serializer().serialize(topic, event);
 
         return new ProducerRecord<>(
                 topic,
@@ -52,5 +37,12 @@ public final class AlertEventKafkaSerializer
                 key,
                 value
         );
+    }
+
+    private AlertCreatedEventSerializer serializer() {
+        if (serializer == null) {
+            serializer = new AlertCreatedEventSerializer();
+        }
+        return serializer;
     }
 }

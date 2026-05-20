@@ -1,11 +1,12 @@
-package ru.flink.model;
+package ru.common.dto;
 
 import ru.tinkoff.kora.json.common.annotation.Json;
 
 import java.util.Set;
 
 @Json
-public record AlertEvent(
+public record AlertCreatedEvent(
+        long filterId,
         Set<Long> subscribers,
         Set<String> exchange,
         Set<String> market,

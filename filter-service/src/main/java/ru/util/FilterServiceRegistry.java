@@ -12,7 +12,7 @@ import java.util.List;
 public class FilterServiceRegistry {
 
     private final ImpulseService impulseService;
-    private List<FilterService> allFilterServices = new ArrayList<>();
+    private final List<FilterService> allFilterServices = new ArrayList<>();
 
     public FilterServiceRegistry(ImpulseService impulseService) {
         this.impulseService = impulseService;

@@ -2,7 +2,7 @@ package ru.services.kafka.publishers;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import ru.common.dto.OutboxCreatedEvent;
+import ru.common.dto.FilterCreatedEvent;
 import ru.tinkoff.kora.kafka.common.annotation.KafkaPublisher;
 import ru.tinkoff.kora.logging.common.annotation.Log;
 
@@ -12,5 +12,5 @@ import java.util.concurrent.CompletableFuture;
 public interface Publisher {
 
     @Log
-    CompletableFuture<RecordMetadata> send(ProducerRecord<String, OutboxCreatedEvent> record);
+    CompletableFuture<RecordMetadata> send(ProducerRecord<String, FilterCreatedEvent> record);
 }

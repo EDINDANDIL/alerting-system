@@ -1,18 +1,18 @@
 package ru.flink.state;
 
-import ru.flink.model.TradePoint;
+import ru.flink.models.TradePoint;
 
 import java.io.Serializable;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-public final class PriceWindow implements Serializable {
+public final class SlidingPriceWindow implements Serializable {
 
     private final long windowLengthNs;
     private final Deque<TradePoint> minDeque = new ArrayDeque<>();
     private final Deque<TradePoint> maxDeque = new ArrayDeque<>();
 
-    public PriceWindow(long windowLengthNs) {this.windowLengthNs = windowLengthNs;}
+    public SlidingPriceWindow(long windowLengthNs) {this.windowLengthNs = windowLengthNs;}
 
     public void add(TradePoint point) {
         long cutoff = point.timestampNs() - windowLengthNs;

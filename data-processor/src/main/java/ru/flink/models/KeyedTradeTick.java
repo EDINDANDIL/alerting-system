@@ -1,4 +1,4 @@
-package ru.flink.model;
+package ru.flink.models;
 
 public record KeyedTradeTick(
         String symbol,

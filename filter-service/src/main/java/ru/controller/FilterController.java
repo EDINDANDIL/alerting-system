@@ -59,18 +59,14 @@ public class FilterController {
     public CompletionStage<HttpResponseEntity<List<Response>>> getAllFilters(
             @Header("X-user-id") long userId
     ) {
-        List<CompletionStage<List<Response>>> stages = filterServiceRegistry.allFilterServices()
+        List<CompletableFuture<List<Response>>> futures = filterServiceRegistry.allFilterServices()
                 .stream()
-                .map(service -> service.findFiltersByUserId(userId))
+                .map(service -> service.findFiltersByUserId(userId).toCompletableFuture())
                 .toList();
 
-        CompletableFuture<?>[] futures = stages.stream()
-                .map(CompletionStage::toCompletableFuture)
-                .toArray(CompletableFuture[]::new);
-
-        return CompletableFuture.allOf(futures)
-                .thenApply(ignored -> stages.stream()
-                        .flatMap(stage -> stage.toCompletableFuture().join().stream())
+        return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
+                .thenApply(ignored -> futures.stream()
+                        .flatMap(future -> future.join().stream())
                         .toList())
                 .thenApply(filters -> HttpResponseEntity.of(200, filters));
     }

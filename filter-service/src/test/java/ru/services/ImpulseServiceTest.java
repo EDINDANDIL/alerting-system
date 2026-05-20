@@ -4,7 +4,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import ru.common.dto.OutboxCreatedEvent;
+import ru.common.dto.FilterCreatedEvent;
 import ru.common.dto.OutboxPayload;
 import ru.common.mappers.outbox.EventOutboxMapper;
 import ru.common.mappers.outbox.OutboxMapperFacade;
@@ -114,6 +114,70 @@ class ImpulseServiceTest {
         verify(outboxRepository, never()).insert(any());
     }
 
+    //TODO посмотреть тесты
+    @Test
+    void subscribe_reusesExistingFilterAndWritesOnlySubscribeEventForNewSubscription() {
+        Request.ImpulseFilterDto request = request();
+        ImpulseFilterEntity existing = entity(FILTER_ID);
+
+        when(filtersRepository.findByConfig(any())).thenReturn(Optional.of(existing));
+        when(userFiltersRepository.subscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(1));
+        when(outboxRepository.insert(any())).thenReturn(100L);
+
+        Response response = service.subscribe(USER_ID, request).toCompletableFuture().join();
+
+        assertEquals(new TestImpulseFilterMapper().toResponse(existing), response);
+        verify(filtersRepository, never()).insert(any());
+        verify(userFiltersRepository).subscribe(USER_ID, FILTER_ID);
+
+        List<FilterOutboxEntity> events = capturedOutboxEvents();
+        assertEquals(1, events.size());
+        assertEquals(OutboxOperation.SUBSCRIBE, events.getFirst().operation());
+        assertEquals("IMPULSE", events.getFirst().action());
+        assertEquals(FILTER_ID, events.getFirst().filterId());
+        assertEquals(Math.toIntExact(USER_ID), events.getFirst().userId());
+        assertNull(events.getFirst().payload());
+    }
+
+    //TODO посмотреть тесты
+    @Test
+    void subscribe_createAndSubscribeEventsContainExpectedFields() {
+        Request.ImpulseFilterDto request = request();
+        ImpulseFilterEntity created = entity(FILTER_ID);
+
+        when(filtersRepository.findByConfig(any())).thenReturn(Optional.empty());
+        when(filtersRepository.insert(any())).thenReturn(created);
+        when(userFiltersRepository.subscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(1));
+        when(outboxRepository.insert(any())).thenReturn(100L, 101L);
+
+        service.subscribe(USER_ID, request).toCompletableFuture().join();
+
+        List<FilterOutboxEntity> events = capturedOutboxEvents();
+        FilterOutboxEntity create = events.get(0);
+        FilterOutboxEntity subscribe = events.get(1);
+
+        assertEquals("IMPULSE", create.action());
+        assertEquals(OutboxOperation.CREATE, create.operation());
+        assertEquals(FILTER_ID, create.filterId());
+        assertEquals(Math.toIntExact(USER_ID), create.userId());
+        assertInstanceOf(OutboxPayload.ImpulseFilter.class, create.payload());
+
+        OutboxPayload.ImpulseFilter payload = (OutboxPayload.ImpulseFilter) create.payload();
+        assertEquals(Set.copyOf(request.exchange()), payload.exchange());
+        assertEquals(Set.copyOf(request.market()), payload.market());
+        assertEquals(Set.copyOf(request.blackList()), payload.blackList());
+        assertEquals(request.timeWindow(), payload.timeWindow());
+        assertEquals(request.direction(), payload.direction());
+        assertEquals(request.percent(), payload.percent());
+        assertEquals(request.volume24h(), payload.volume24h());
+
+        assertEquals("IMPULSE", subscribe.action());
+        assertEquals(OutboxOperation.SUBSCRIBE, subscribe.operation());
+        assertEquals(FILTER_ID, subscribe.filterId());
+        assertEquals(Math.toIntExact(USER_ID), subscribe.userId());
+        assertNull(subscribe.payload());
+    }
+
     @Test
     void unsubscribe_removesSubscriptionAndWritesOnlyUnsubscribeWhenSubscribersRemain() {
         ImpulseFilterEntity existing = entity(FILTER_ID);
@@ -150,6 +214,48 @@ class ImpulseServiceTest {
                 events.stream().map(FilterOutboxEntity::operation).toList());
         assertNull(events.get(0).payload());
         assertNull(events.get(1).payload());
+    }
+
+    //TODO посмотреть тесты
+    @Test
+    void findFiltersByUserId_returnsMappedResponses() {
+        ImpulseFilterEntity first = entity(10L);
+        ImpulseFilterEntity second = new ImpulseFilterEntity(
+                20L,
+                List.of("BYBIT"),
+                List.of("SPOT"),
+                List.of("ETHUSDT"),
+                "IMPULSE",
+                120,
+                Direction.DOWN,
+                5,
+                2_000_000L
+        );
+
+        when(filtersRepository.findFiltersByUserId(USER_ID)).thenReturn(List.of(first, second));
+
+        List<Response> responses = service.findFiltersByUserId(USER_ID).toCompletableFuture().join();
+
+        assertEquals(List.of(
+                new TestImpulseFilterMapper().toResponse(first),
+                new TestImpulseFilterMapper().toResponse(second)
+        ), responses);
+        verify(filtersRepository).findFiltersByUserId(USER_ID);
+        verifyNoInteractions(outboxRepository);
+        verify(userFiltersRepository, never()).subscribe(anyLong(), anyLong());
+        verify(userFiltersRepository, never()).unsubscribe(anyLong(), anyLong());
+    }
+
+    //TODO посмотреть тесты
+    @Test
+    void findFiltersByUserId_returnsEmptyListWhenRepositoryReturnsNoFilters() {
+        when(filtersRepository.findFiltersByUserId(USER_ID)).thenReturn(List.of());
+
+        List<Response> responses = service.findFiltersByUserId(USER_ID).toCompletableFuture().join();
+
+        assertTrue(responses.isEmpty());
+        verify(filtersRepository).findFiltersByUserId(USER_ID);
+        verifyNoInteractions(outboxRepository);
     }
 
     @Test
@@ -238,10 +344,10 @@ class ImpulseServiceTest {
                     dto.market(),
                     dto.blackList(),
                     dto.action(),
-                    dto.timeWindow(),
+                    Math.toIntExact(dto.timeWindow()),
                     dto.direction(),
                     dto.percent(),
-                    (long) dto.volume24h()
+                    dto.volume24h()
             );
         }
 
@@ -255,7 +361,7 @@ class ImpulseServiceTest {
                     entity.timeWindow(),
                     entity.direction(),
                     entity.percent(),
-                    Math.toIntExact(entity.volume24h())
+                    entity.volume24h()
             );
         }
 
@@ -283,14 +389,14 @@ class ImpulseServiceTest {
                     entity.timeWindow(),
                     entity.direction(),
                     entity.percent(),
-                    Math.toIntExact(entity.volume24h())
+                    entity.volume24h()
             );
         }
     }
 
     private static final class TestEventOutboxMapper implements EventOutboxMapper {
         @Override
-        public FilterOutboxEntity asEntity(OutboxCreatedEvent event) {
+        public FilterOutboxEntity asEntity(FilterCreatedEvent event) {
             return new FilterOutboxEntity(
                     null,
                     event.action(),
@@ -303,8 +409,8 @@ class ImpulseServiceTest {
         }
 
         @Override
-        public OutboxCreatedEvent asEvent(FilterOutboxEntity entity) {
-            return new OutboxCreatedEvent(
+        public FilterCreatedEvent asEvent(FilterOutboxEntity entity) {
+            return new FilterCreatedEvent(
                     entity.action(),
                     entity.operation(),
                     entity.filterId(),

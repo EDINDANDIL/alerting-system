@@ -1,22 +1,19 @@
 package ru;
 
+import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import ru.common.dto.OutboxCreatedEvent;
-import ru.common.mappers.direction.DirectionJsonReader;
-import ru.common.mappers.direction.DirectionJsonWriter;
+import ru.common.dto.AlertCreatedEvent;
+import ru.common.dto.FilterCreatedEvent;
 import ru.common.mappers.jdbc.JdbcJsonbMapperModule;
-import ru.common.mappers.outbox.EventOutboxMapper;
-import ru.common.mappers.outbox.OutboxMapperFacade;
-import ru.common.mappers.serde.OutboxCreatedEventSerializer;
-import ru.common.util.Direction;
+import ru.common.mappers.serde.AlertCreatedEventDeserializer;
+import ru.common.mappers.serde.FilterCreatedEventSerializer;
 import ru.tinkoff.kora.application.graph.KoraApplication;
 import ru.tinkoff.kora.common.KoraApp;
 import ru.tinkoff.kora.config.hocon.HoconConfigModule;
 import ru.tinkoff.kora.database.jdbc.JdbcDatabaseModule;
 import ru.tinkoff.kora.http.server.undertow.UndertowHttpServerModule;
-import ru.tinkoff.kora.json.common.JsonReader;
-import ru.tinkoff.kora.json.common.JsonWriter;
 import ru.tinkoff.kora.json.module.JsonModule;
 import ru.tinkoff.kora.kafka.common.KafkaModule;
 import ru.tinkoff.kora.logging.logback.LogbackModule;
@@ -35,24 +32,10 @@ public interface Application extends
         SchedulingJdkModule,
         KafkaModule {
 
-//    default EventOutboxMapper eventOutboxMapper() {
-//        return new ru.common.mappers.outbox.EventOutboxMapperImpl();
-//    }
-//
-//    default OutboxMapperFacade outboxMapperFacade(EventOutboxMapper mapper) {
-//        return new OutboxMapperFacade(mapper);
-//    }
-//
-//    default JsonReader<Direction> directionJsonReader() {
-//        return new DirectionJsonReader();
-//    }
-//
-//    default JsonWriter<Direction> directionJsonWriter() {
-//        return new DirectionJsonWriter();
-//    }
-
     default Serializer<String> stringSerializer() {return new StringSerializer();}
-    default Serializer<OutboxCreatedEvent> outboxCreatedEventSerializer() {return new OutboxCreatedEventSerializer();}
+    default Deserializer<String> stringDeserializer() {return new StringDeserializer();}
+    default Serializer<FilterCreatedEvent> outboxCreatedEventSerializer() {return new FilterCreatedEventSerializer();}
+    default Deserializer<AlertCreatedEvent> alertCreatedEventDeserializer() {return new AlertCreatedEventDeserializer();}
 
     static void main(String[] args) {
         KoraApplication.run(ApplicationGraph::graph);
