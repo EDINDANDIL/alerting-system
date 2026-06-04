@@ -30,7 +30,6 @@ subprojects {
 tasks.register('buildArtifacts') {
     dependsOn ':parser:build'
     dependsOn ':filter-service:fatJar'
-    dependsOn ':alert-service:fatJar'
     dependsOn ':data-processor:fatJar'
 
     doFirst {
@@ -48,12 +47,6 @@ tasks.register('buildArtifacts') {
             from 'filter-service/build/libs/filter-service-1.0-SNAPSHOT-fat.jar'
             into 'artifacts'
             rename { 'filter-service.jar' }
-        }
-
-        copy {
-            from 'alert-service/build/libs/alert-service-1.0-SNAPSHOT-fat.jar'
-            into 'artifacts'
-            rename { 'alert-service.jar' }
         }
 
         copy {

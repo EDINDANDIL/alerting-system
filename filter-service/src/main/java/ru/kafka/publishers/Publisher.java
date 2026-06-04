@@ -1,4 +1,4 @@
-package ru.services.kafka.publishers;
+package ru.kafka.publishers;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;

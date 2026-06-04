@@ -1,117 +1,121 @@
 # Alerting System
 
-Система потоковой обработки рыночных событий: фильтры создаются через API, трейды идут через Kafka, Flink проверяет условия и публикует алерты.
+Система потоковой обработки рыночных событий.
+Фильтры (impulse) создаются через REST API → уходят в Kafka → Flink применяет их к потоку трейдов → алерты публикуются в Kafka.
 
 ## Стек
 
-- Java 25: `parser`, `filter-service`, `alert-service`
-- Java 21: Flink job `data-processor`
+- Java 25: `filter-service`, `parser`
+- Java 21: `data-processor` (Flink job)
 - Gradle multi-module
 - Apache Kafka 3.9.1, single broker, KRaft
 - Apache Flink 2.2.0
 - PostgreSQL 16 + Flyway
 - Docker Compose
-- Kora Framework
+- Kora Framework (Tinkoff)
 
 ## Модули
 
 | Модуль | Назначение |
 |---|---|
-| `parser` | Тестовый генератор трейдов в `trades-topic` |
-| `filter-service` | API фильтров, PostgreSQL, outbox, публикация в `filter-topic` |
-| `data-processor` | Flink job: читает трейды и фильтры, пишет алерты |
-| `alert-service` | Читает `alert-topic`, отдает алерты наружу |
-| `filter-outbox-common` | Общие DTO и JSON-маппинг outbox-событий |
-| `client-desktop` | Клиентский модуль, не основной путь запуска сейчас |
+| `filter-outbox-common` | Общие DTO (`AlertCreatedEvent`, `FilterCreatedEvent`, `OutboxPayload`), сериализаторы, JDBC-мапперы для JSONB |
+| `filter-service` | REST API фильтров + PostgreSQL + transactional outbox → `filter-topic`. Читает алерты из `alert-topic` |
+| `data-processor` | Flink job: читает `trades-topic` (бинарный 16-байтный протокол) + `filter-topic` (broadcast), ImpulseStrategy, пишет `AlertCreatedEvent` в `alert-topic` |
+| `parser` | Генератор тестовых трейдов в `trades-topic` |
 
 ## Kafka topics
 
-| Topic | Назначение | Retention |
-|---|---|---|
-| `trades-topic` | Поток трейдов | 1 сек |
-| `filter-topic` | События фильтров | 7 дней |
-| `command-topic` | Резерв под команды | 7 дней |
-| `alert-topic` | Быстрые уведомления | 5 сек |
+| Topic | Partitions | Retention | Назначение |
+|---|---|---|---|
+| `trades-topic` | 32 | 1 с | Бинарный поток трейдов |
+| `filter-topic` | 8 | 7 дн. | События жизненного цикла фильтров |
+| `alert-topic` | 8 | 5 с | Алерты от Flink |
+| `command-topic` | 8 | 7 дн. | Зарезервирован |
 
 Контракт `trades-topic`:
+- key: `symbol` (UTF-8)
+- value: 16 bytes little-endian
+  - `long price` offset 0
+  - `long timestampNs` offset 8
 
-- key: `symbol` как UTF-8 string
-- value: 16 bytes, little-endian
-- `long price` offset `0`
-- `long timestampNs` offset `8`
+## Архитектура
+
+```
+parser ──(trades-topic)──► Flink data-processor ──(alert-topic)──► Kafka
+                                   ▲
+filter-service ──(filter-topic)────┘
+      ▲
+      │ REST API
+      │ POST /api/filters/{type}       — создать/подписаться
+      │ DELETE /api/filters/{type}/{id} — отписаться
+      │ GET  /api/filters              — список фильтров
+      │
+PostgreSQL (impulse_filters + user_impulse_filters + filter_outbox)
+```
+
+## Data flow
+
+1. Клиент создаёт фильтр через `POST /api/filters/IMPULSE`.
+2. `filter-service` пишет в `impulse_filters` + `filter_outbox`.
+3. Планировщик читает outbox и публикует `FilterCreatedEvent` в `filter-topic`.
+4. Flink job получает фильтр (broadcast state) и начинает применять его к входящим трейдам.
+5. При срабатывании `ImpulseStrategy` Flink публикует `AlertCreatedEvent` в `alert-topic`.
+6. `filter-service` потребляет `alert-topic`.
 
 ## Локальный запуск
 
-Требования:
-
-- JDK 25
-- Docker Desktop
-- Docker Compose
-
-Собрать jar-файлы в `artifacts/`:
+Требования: JDK 25, Docker Desktop.
 
 ```powershell
 .\gradlew.bat buildArtifacts
-```
-
-Запустить весь стенд:
-
-```powershell
-docker compose -f docker-compose.yml up -d
+docker compose up -d
 ```
 
 Проверить контейнеры:
 
 ```powershell
-docker compose -f docker-compose.yml ps
+docker compose ps
 ```
 
 Остановить:
 
 ```powershell
-docker compose -f docker-compose.yml down
+docker compose down
 ```
 
-Удалить контейнеры и volumes:
+## Сервисы compose
 
-```powershell
-docker compose -f docker-compose.yml down -v
-```
+| Сервис | Порт | Назначение |
+|---|---|---|
+| `postgres` | 5432 | БД фильтров |
+| `kafka` | 9092 | Kafka broker (KRaft) |
+| `kafka-init` | — | Создание топиков |
+| `flink-jobmanager` | 8088 | Flink UI |
+| `flink-taskmanager` | — | Flink worker |
+| `flink-data-processor-submit` | — | Сабмит job во Flink |
+| `filter-service` | 8081, 8086 | REST API |
+| `cxet-kafka-service` | — | C++ CXET-коннектор |
 
-## Что запускает Compose
-
-| Сервис | Порт | Комментарий |
-|---|---:|---|
-| `postgres` | `5432` | БД фильтров |
-| `kafka` | `9092` | Один Kafka broker |
-| `kafka-init` | - | Создает topics |
-| `flink-jobmanager` | `8088` | Flink UI |
-| `flink-taskmanager` | - | Flink worker |
-| `flink-data-processor-submit` | - | Сабмитит `data-processor-job.jar` во Flink |
-| `filter-service` | `8081`, `8086` | API фильтров |
-| `parser` | `9080` | Тестовая генерация трейдов |
-| `alert-service` | `8090`, `7818` | HTTP/WebSocket алертов |
-
-Compose не собирает код. Он берет готовые jar-файлы из `artifacts/`.
+Compose не собирает код — использует jar из `artifacts/`.
 
 ## Flink job
 
 Список job:
 
 ```powershell
-docker exec -it flink-jobmanager flink list -m flink-jobmanager:8081
+docker exec flink-jobmanager flink list -m flink-jobmanager:8081
 ```
 
 Отменить job:
 
 ```powershell
-docker exec -it flink-jobmanager flink cancel -m flink-jobmanager:8081 <job-id>
+docker exec flink-jobmanager flink cancel -m flink-jobmanager:8081 <job-id>
 ```
 
-Засабмитить заново:
+Перезапустить submit:
 
 ```powershell
-docker compose -f docker-compose.yml up flink-data-processor-submit
+docker compose up flink-data-processor-submit
 ```
 
 ## Kafka
@@ -119,82 +123,52 @@ docker compose -f docker-compose.yml up flink-data-processor-submit
 Список топиков:
 
 ```powershell
-docker exec -it kafka /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server kafka:9092
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server kafka:9092
 ```
 
 Описание топика:
 
 ```powershell
-docker exec -it kafka /opt/kafka/bin/kafka-topics.sh --describe --bootstrap-server kafka:9092 --topic trades-topic
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --describe --bootstrap-server kafka:9092 --topic trades-topic
 ```
 
 Consumer groups:
 
 ```powershell
-docker exec -it kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:9092 --all-groups --describe
+docker exec kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:9092 --all-groups --describe
 ```
 
-## Логи
+## Генерация тестовых трейдов
 
-Все логи:
-
-```powershell
-docker compose -f docker-compose.yml logs --tail 200
-```
-
-Конкретный сервис:
+Parser закомментирован в compose. Для ручного запуска:
 
 ```powershell
-docker compose -f docker-compose.yml logs -f --tail 200 parser
-docker compose -f docker-compose.yml logs -f --tail 200 filter-service
-docker compose -f docker-compose.yml logs -f --tail 200 alert-service
-docker compose -f docker-compose.yml logs -f --tail 200 flink-data-processor-submit
-docker compose -f docker-compose.yml logs -f --tail 200 flink-taskmanager
-```
-
-## Тестовый поток трейдов
-
-После запуска стенда:
-
-```powershell
+java -jar artifacts\parser.jar
 Invoke-RestMethod http://localhost:9080/api/trades/generate
 ```
 
-Если Kafka приняла сообщение, в логах parser будет `ProduceResponse` с `errorCode=0`.
-
 ## Сборка и тесты
-
-Собрать все:
-
-```powershell
-.\gradlew.bat build
-```
-
-Собрать artifacts:
 
 ```powershell
 .\gradlew.bat buildArtifacts
-```
-
-Тесты конкретного модуля:
-
-```powershell
 .\gradlew.bat :data-processor:test
 .\gradlew.bat :filter-service:test
 ```
 
-## Конфиги
+## Переменные окружения
 
-Конфиги лежат внутри jar как resources. Для Docker-режима compose передает env-переменные:
+| Переменная | Назначение |
+|---|---|
+| `KAFKA_BOOTSTRAP_SERVERS` | Адреса Kafka |
+| `DB_URL` | JDBC URL PostgreSQL |
+| `DB_USERNAME` | Пользователь БД |
+| `DB_PASSWORD` | Пароль БД |
+| `KORA_CONFIG_APPLICATION` | Конфиг (docker/local) |
 
-- `KAFKA_BOOTSTRAP_SERVERS`
-- `DB_URL`
-- `DB_USERNAME`
-- `DB_PASSWORD`
-- `KORA_CONFIG_APPLICATION`
+## Логи
 
-## Production idea
-
-Локально удобно запускать готовые jar через volume из `artifacts/`.
-
-Для production обычно собирают Docker image на каждый сервис через `Dockerfile`, пушат image в registry и запускают уже immutable image, а не jar с ноутбука.
+```powershell
+docker compose logs --tail 200
+docker compose logs -f --tail 200 filter-service
+docker compose logs -f --tail 200 flink-data-processor-submit
+```

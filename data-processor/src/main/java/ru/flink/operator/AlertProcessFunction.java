@@ -30,8 +30,10 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
         AlertCreatedEvent> {
 
     private final MapStateDescriptor<Long, ImpulseRuntimeFilter> filtersDescriptor;
+    private static final long ALERT_COOLDOWN_NS = 30_000_000_000L;
 
     private transient MapState<Long, SlidingPriceWindow> windows;
+    private transient MapState<String, Long> lastAlertAt;
     private transient ImpulseStrategy impulseStrategy;
 
     public AlertProcessFunction(MapStateDescriptor<Long, ImpulseRuntimeFilter> filtersDescriptor) {
@@ -47,7 +49,15 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
                         SlidingPriceWindow.class
                 );
 
+        MapStateDescriptor<String, Long> lastAlertAtDescriptor =
+                new MapStateDescriptor<>(
+                        "last-alert-at",
+                        String.class,
+                        Long.class
+                );
+
         windows = getRuntimeContext().getMapState(windowsDescriptor);
+        lastAlertAt = getRuntimeContext().getMapState(lastAlertAtDescriptor);
         impulseStrategy = new ImpulseStrategy();
     }
 
@@ -62,7 +72,6 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
 
         switch (event.operation()) {
 
-
             case CREATE -> {
                 if (event.payload() instanceof OutboxPayload.ImpulseFilter payload) {
                     filters.put(
@@ -72,9 +81,7 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
                 }
             }
 
-
             case DELETE -> filters.remove(event.filterId());
-
 
             case SUBSCRIBE -> {
                 ImpulseRuntimeFilter old = filters.get(event.filterId());
@@ -83,15 +90,12 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
                 }
             }
 
-
             case UNSUBSCRIBE -> {
                 ImpulseRuntimeFilter old = filters.get(event.filterId());
                 if (old != null) {
                     filters.put(event.filterId(), old.unsubscribe(event.userId()));
                 }
             }
-
-
         }
     }
 
@@ -135,6 +139,16 @@ public final class AlertProcessFunction extends KeyedBroadcastProcessFunction<
             for (ImpulseRuntimeFilter filter : entry.getValue()) {
 
                 if (!impulseStrategy.trigger(window, filter)) continue;
+
+                String alertKey = filter.filterId() + ":" + tick.symbol();
+                Long previousAlertAt = lastAlertAt.get(alertKey);
+
+                if (previousAlertAt != null
+                    && tick.timestampNs() - previousAlertAt < ALERT_COOLDOWN_NS) {
+                    continue;
+                }
+
+                lastAlertAt.put(alertKey, tick.timestampNs());
 
                 out.collect(new AlertCreatedEvent(
                         filter.filterId(),

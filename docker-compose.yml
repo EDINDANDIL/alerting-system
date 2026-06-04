@@ -191,25 +191,6 @@ services:
 #      kafka-init:
 #        condition: service_completed_successfully
 
-  alert-service:
-    image: eclipse-temurin:25-jre-alpine
-    container_name: alerting-alert-service
-    command: [ "java", "-jar", "/app/alert-service.jar" ]
-    ports:
-      - "8090:8090"
-      - "7818:7818"
-    environment:
-      KORA_CONFIG_APPLICATION: "application-docker.conf"
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
-      JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
-    volumes:
-      - ./artifacts/alert-service.jar:/app/alert-service.jar:ro
-    networks:
-      - alyarma
-    depends_on:
-      kafka-init:
-        condition: service_completed_successfully
-
   cxet-kafka-service:
     build:
       context: ./templates/CppService/CXETCPP

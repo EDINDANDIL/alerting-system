@@ -1,4 +1,4 @@
-package ru.services.kafka.listeners;
+package ru.kafka.listeners;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

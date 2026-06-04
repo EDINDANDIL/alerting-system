@@ -7,7 +7,7 @@ import ru.common.dto.FilterCreatedEvent;
 import ru.common.mappers.outbox.OutboxMapperFacade;
 import ru.common.persistence.entity.FilterOutboxEntity;
 import ru.persistence.repository.OutboxRepository;
-import ru.services.kafka.publishers.Publisher;
+import ru.kafka.publishers.Publisher;
 import ru.tinkoff.kora.common.Component;
 import ru.tinkoff.kora.scheduling.jdk.annotation.ScheduleAtFixedRate;
 
