@@ -28,5 +28,17 @@ public sealed interface OutboxPayload {
             Direction direction,
             long percent,
             long volume24h
-    ) implements OutboxPayload {}
+    ) implements OutboxPayload {
+        public ImpulseFilter {
+            if (blackList == null) {
+                blackList = Set.of();
+            }
+            if (exchange == null) {
+                exchange = Set.of();
+            }
+            if (market == null) {
+                market = Set.of();
+            }
+        }
+    }
 }

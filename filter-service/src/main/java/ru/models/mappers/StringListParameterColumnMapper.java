@@ -15,7 +15,7 @@ public final class StringListParameterColumnMapper implements JdbcParameterColum
 
     @Override
     public void set(PreparedStatement stmt, int index, @Nullable List<String> value) throws SQLException {
-        if (value == null || value.isEmpty()) {
+        if (value == null) {
             stmt.setNull(index, Types.ARRAY);
             return;
         }

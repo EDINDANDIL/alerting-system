@@ -19,6 +19,7 @@ import ru.tinkoff.kora.kafka.common.KafkaModule;
 import ru.tinkoff.kora.logging.logback.LogbackModule;
 import ru.tinkoff.kora.scheduling.common.SchedulingModule;
 import ru.tinkoff.kora.scheduling.jdk.SchedulingJdkModule;
+import ru.tinkoff.kora.micrometer.module.MetricsModule;
 
 @KoraApp
 public interface Application extends
@@ -30,6 +31,7 @@ public interface Application extends
         JdbcJsonbMapperModule,
         SchedulingModule,
         SchedulingJdkModule,
+        MetricsModule,
         KafkaModule {
 
     default Serializer<String> stringSerializer() {return new StringSerializer();}

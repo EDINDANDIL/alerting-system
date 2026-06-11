@@ -22,5 +22,14 @@ public sealed interface Request {
             Direction direction,
             int percent,
             long volume24h
-    ) implements Request {}
+    ) implements Request {
+        public ImpulseFilterDto {
+            if (blackList == null) blackList = List.of();
+            if (exchange == null) exchange = List.of();
+            if (market == null) market = List.of();
+        }
+    }
+
+    @Json
+    record AuthRequest(String email, String password) {}
 }

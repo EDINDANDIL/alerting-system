@@ -14,4 +14,3 @@ public final class DirectionColumnMapper implements JdbcResultColumnMapper<Direc
         return Direction.fromCode(code);
     }
 }
-

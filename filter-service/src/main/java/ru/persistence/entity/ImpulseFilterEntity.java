@@ -37,4 +37,10 @@ public record ImpulseFilterEntity(
 
         @Column("volume_24h")
         Long volume24h
-) {}
+) {
+    public ImpulseFilterEntity {
+        if (blackList == null) blackList = List.of();
+        if (exchange == null) exchange = List.of();
+        if (market == null) market = List.of();
+    }
+}

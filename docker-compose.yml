@@ -221,7 +221,27 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
+  prometheus:
+      image: prom/prometheus:v2.51.0
+      container_name: prometheus
+      volumes:
+        - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      ports:
+        - "9090:9090"
+      networks:
+        - alyarma
 
+  grafana:
+        image: grafana/grafana-oss:10.4.1
+        container_name: grafana
+        ports:
+          - "3000:3000"
+        environment:
+          - GF_SECURITY_ADMIN_PASSWORD=admin
+        networks:
+          - alyarma
+        depends_on:
+          - prometheus
 
 volumes:
   postgres_data:

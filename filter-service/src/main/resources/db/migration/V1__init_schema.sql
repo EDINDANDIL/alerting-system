@@ -1,5 +1,13 @@
 -- Миграция V1: Создание основной схемы БД для filter-service
 
+-- Таблица пользователей
+CREATE TABLE IF NOT EXISTS users (
+    id BIGSERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Таблица фильтров IMPULSE
 CREATE TABLE IF NOT EXISTS impulse_filters (
     id BIGSERIAL PRIMARY KEY,
@@ -17,7 +25,7 @@ CREATE TABLE IF NOT EXISTS impulse_filters (
 
 -- Таблица подписок пользователей на фильтры
 CREATE TABLE IF NOT EXISTS user_impulse_filters (
-    user_id INTEGER NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     impulse_id BIGINT NOT NULL REFERENCES impulse_filters(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (user_id, impulse_id)
@@ -29,7 +37,7 @@ CREATE TABLE IF NOT EXISTS filter_outbox (
     action VARCHAR(50) NOT NULL,
     operation VARCHAR(50) NOT NULL,
     filter_id BIGINT NOT NULL,
-    user_id INTEGER,
+    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     payload JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

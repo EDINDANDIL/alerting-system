@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 5s # собирать метрики каждые 5 секунд
+
+scrape_configs:
+  - job_name: 'filter-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['filter-service:8086'] # опрашиваем приватный порт Kora внутри докер-сети
