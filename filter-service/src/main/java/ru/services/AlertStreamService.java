@@ -22,8 +22,7 @@ public final class AlertStreamService {
     public Flow.Publisher<ByteBuffer> connect(long userId) {
         SubmissionPublisher<ByteBuffer> publisher = new SubmissionPublisher<>();
 
-        connections
-                .computeIfAbsent(userId, ignored -> new CopyOnWriteArrayList<>())
+        connections.computeIfAbsent(userId, ignored -> new CopyOnWriteArrayList<>())
                 .add(publisher);
 
         publisher.submit(event(":connected"));

@@ -36,4 +36,6 @@ dependencies {
     implementation "ru.tinkoff.kora:config-hocon"
     implementation "ch.qos.logback:logback-classic:1.4.8"
     implementation "ru.tinkoff.kora:kafka"
+    // Source: https://mvnrepository.com/artifact/org.projectlombok/lombok
+    implementation 'org.projectlombok:lombok:1.18.46'
 }

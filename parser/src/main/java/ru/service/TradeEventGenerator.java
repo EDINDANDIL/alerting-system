@@ -3,18 +3,20 @@ package ru.service;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import ru.dto.Message;
 import ru.dto.TradeTick;
-import ru.publishers.TradesGenerator;
+import ru.publishers.TradePublisher;
 import ru.serde.TradeEventBinaryEncoder;
 import ru.tinkoff.kora.common.Component;
 
 @Component
 public class TradeEventGenerator {
 
-    private final TradesGenerator publisher;
+    private final TradePublisher publisher;
 
-    public TradeEventGenerator(TradesGenerator publisher) {
+    public TradeEventGenerator(TradePublisher publisher) {
         this.publisher = publisher;
     }
+
+
 
     public void generate(Message msg) {
         long price = msg.startPrice();
