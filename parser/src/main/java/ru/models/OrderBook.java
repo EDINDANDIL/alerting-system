@@ -11,7 +11,12 @@ public class OrderBook {
     private final NavigableMap<Long, Map<Long ,Order>> bids = new TreeMap<>(Comparator.reverseOrder());
     private final NavigableMap<Long, Map<Long, Order>> asks = new TreeMap<>();
 
-    public OrderBook(String name) {this.name = name;}
+    private final long tickSize;
+
+    public OrderBook(String name, long tickSize) {
+        this.name = name;
+        this.tickSize = tickSize;
+    }
 
     public String name() {return name;}
 
@@ -33,7 +38,6 @@ public class OrderBook {
     }
 
     private void match(Order order, NavigableMap<Long, Map<Long, Order>> oppositeBook, List<TradeTick> trades) {
-        long timestamp = System.nanoTime();
 
         while (!order.isFilled() && !oppositeBook.isEmpty()) {
             Map.Entry<Long, Map<Long, Order>> bestEntry = oppositeBook.firstEntry();
@@ -44,20 +48,23 @@ public class OrderBook {
                 if (order.getSide() == Side.SELL && order.getPrice() > bestPrice) break;
             }
 
-            Map<Long, Order> map = bestEntry.getValue();
-            while (!order.isFilled() && !map.isEmpty()) {
-                Map.Entry<Long, Order> entry = map.entrySet().iterator().next();
+            Map<Long, Order> queueWithOffers = bestEntry.getValue(); // LinkedHashMap с ордерами!
+            while (!order.isFilled() && !queueWithOffers.isEmpty()) {
+                Map.Entry<Long, Order> entry = queueWithOffers.entrySet().iterator().next();
                 Order oppositeOrder = entry.getValue();
                 long matchQty = Math.min(order.getCount(), oppositeOrder.getCount());
 
                 order.reduceCount(matchQty);
                 oppositeOrder.reduceCount(matchQty);
 
-                trades.add(new TradeTick(bestPrice, timestamp));
+                order.getTrader().onOrderFilled(order, bestPrice, matchQty);
+                oppositeOrder.getTrader().onOrderFilled(oppositeOrder, bestPrice, matchQty);
 
-                if (oppositeOrder.isFilled()) map.remove(entry.getKey());
+                trades.add(new TradeTick(bestPrice, System.nanoTime()));
+
+                if (oppositeOrder.isFilled()) queueWithOffers.remove(entry.getKey());
             }
-            if (map.isEmpty()) oppositeBook.remove(bestPrice);
+            if (queueWithOffers.isEmpty()) oppositeBook.remove(bestPrice);
         }
     }
 

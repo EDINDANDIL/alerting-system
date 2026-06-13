@@ -1,7 +1,7 @@
 package ru.controller;
 
 import ru.dto.Message;
-import ru.service.TradeEventGenerator;
+import ru.models.Simulation;
 import ru.tinkoff.kora.common.Component;
 import ru.tinkoff.kora.http.common.HttpMethod;
 import ru.tinkoff.kora.http.common.annotation.HttpRoute;
@@ -13,16 +13,16 @@ import ru.tinkoff.kora.json.common.annotation.Json;
 @HttpController
 public class TradeEventController {
 
-    private final TradeEventGenerator generator;
+    private final Simulation generator;
 
-    public TradeEventController(TradeEventGenerator generator) {
+    public TradeEventController(Simulation generator) {
         this.generator = generator;
     }
 
     @HttpRoute(method = HttpMethod.POST, path = "/api/trades/generate")
-    public HttpServerResponse generate(@Json Message msg) {
+    public HttpServerResponse generate() throws InterruptedException {
 
-        generator.generate(msg);
+        generator.runTickParallel();
 
         return HttpServerResponse.of(200);
     }
