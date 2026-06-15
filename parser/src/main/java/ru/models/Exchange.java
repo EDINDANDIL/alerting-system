@@ -8,17 +8,13 @@ import ru.tinkoff.kora.common.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class Exchange {
     private final Map<String, OrderBook> orderBooks = new ConcurrentHashMap<>();
     private final TradePublisher publisher;
-
-    public Exchange(TradePublisher publisher) {
-        this.publisher = publisher;
-    }
-
     private final Map<String, Long> tickSizes = new ConcurrentHashMap<>();
 
     public void registerSymbol(String symbol, long tickSize) {
@@ -26,26 +22,20 @@ public class Exchange {
     }
 
     public long getTickSize(String symbol) {
-        return tickSizes.getOrDefault(symbol, 1_000_000L); // Дефолтный шаг цены $0.01 (1_000_000 в масштабе 10^8)
+        return tickSizes.getOrDefault(symbol, 1000L); // Дефолтный шаг цены $0.00001 (1000 в масштабе 10^8)
+    }
+
+    public Exchange(TradePublisher publisher) {
+        this.publisher = publisher;
     }
 
     public void order(Order order) {
         OrderBook orderBook = orderBooks.computeIfAbsent(
                 order.getSymbol(),
-                sym -> new OrderBook(sym, getTickSize(sym))
+                OrderBook::new
         );
         List<TradeTick> trades = orderBook.order(order);
-
-        // TODO делегировать задачу
-        if (!trades.isEmpty()) {
-            trades.forEach(e -> publisher.send(
-            new ProducerRecord<>(
-                    "trades-topic",
-                    order.getSymbol(),
-                    TradeEventBinaryEncoder.encode(e)
-            )
-            ));
-        }
+        if (!trades.isEmpty()) send(trades, order);
     }
 
     public void cancel(Order order) {
@@ -54,7 +44,7 @@ public class Exchange {
         orderBook.cancel(order);
     }
 
-    public long getMarketPrice(String symbol) {
+    public long getMidPrice(String symbol) {
         OrderBook book = orderBooks.get(symbol);
         if (book == null) return 0;
 
@@ -71,5 +61,19 @@ public class Exchange {
     public long getBestAsk(String symbol) {
         OrderBook book= orderBooks.get(symbol);
         return book == null ? 0 : book.getBestAsk();
+    }
+
+    private void send(List<TradeTick> trades, Order order) {
+        trades.forEach(e -> CompletableFuture.runAsync(() -> publisher.send(
+                new ProducerRecord<>(
+                        "trades-topic",
+                        order.getSymbol(),
+                        TradeEventBinaryEncoder.encode(e)
+                )
+        )));
+    }
+
+    private void send1(List<TradeTick> trades, Order order) {
+        IO.println(trades + " " + order);
     }
 }

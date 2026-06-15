@@ -11,16 +11,11 @@ public class OrderBook {
     private final NavigableMap<Long, Map<Long ,Order>> bids = new TreeMap<>(Comparator.reverseOrder());
     private final NavigableMap<Long, Map<Long, Order>> asks = new TreeMap<>();
 
-    private final long tickSize;
-
-    public OrderBook(String name, long tickSize) {
-        this.name = name;
-        this.tickSize = tickSize;
-    }
+    public OrderBook(String name) {this.name = name;}
 
     public String name() {return name;}
 
-    public List<TradeTick> order(Order order) {
+    public synchronized List<TradeTick> order(Order order) {
         List<TradeTick> trades = new ArrayList<>();
 
         if (order.getSide() == Side.BUY) {
@@ -68,7 +63,7 @@ public class OrderBook {
         }
     }
 
-    public void cancel(Order order) {
+    public synchronized void cancel(Order order) {
         if (order.getSide() == Side.BUY) {
             var map = bids.get(order.getPrice());
             if (map != null) map.remove(order.getId());
@@ -81,7 +76,7 @@ public class OrderBook {
         }
     }
 
-    public long getBestBid() {return bids.isEmpty() ? 0 : bids.firstKey();}
+    public synchronized long getBestBid() {return bids.isEmpty() ? 0 : bids.firstKey();}
 
-    public long getBestAsk() {return asks.isEmpty() ? 0 : asks.firstKey();}
+    public synchronized long getBestAsk() {return asks.isEmpty() ? 0 : asks.firstKey();}
 }

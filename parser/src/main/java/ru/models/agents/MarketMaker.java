@@ -14,27 +14,27 @@ public class MarketMaker extends AbstractTrader {
     private final long limit;           // Предельный инвентарь риска
     private final long safe;            // Безопасный инвентарь
     private final long cooldownTicks;   // Время паузы в тиках
-    private final List<String> symbols; // Список торгуемых монет
 
     // Состояние и время паузы изолировано для каждой монеты
     private final Map<String, State> states = new HashMap<>();
     private final Map<String, Long> suspensionEndTicks = new HashMap<>();
 
-    public MarketMaker(double theta, double delta, long balance, 
-                       double pMmedge, long limit, long safe, long cooldownTicks,
-                       List<String> symbols) {
-        super(theta, 0.0, delta, balance); // Во время нормальной торговли mu = 0
+    public MarketMaker(
+            double theta, double delta, long balance,
+            double pMmedge, long limit, long safe, long cooldownTicks,
+            List<String> symbols, Map<String, Double> targetUsdVolumes)
+    {
+        super(theta, 0.0, delta, balance, symbols, targetUsdVolumes); // Во время нормальной торговли mu = 0
         this.pMmedge = pMmedge;
         this.limit = limit;
         this.safe = safe;
         this.cooldownTicks = cooldownTicks;
-        this.symbols = symbols;
     }
 
     @Override
     public List<Order> tick(Exchange market, long currentTick) {
         List<Order> newOrders = new ArrayList<>();
-        for (String symbol : symbols) {
+        for (String symbol : getSymbols()) {
             newOrders.addAll(tickForSymbol(market, symbol, currentTick));
         }
         return newOrders;
@@ -62,20 +62,13 @@ public class MarketMaker extends AbstractTrader {
             state = State.STRESSED;
             states.put(symbol, State.STRESSED);
             // Снимаем все наши лимитки по этому символу из стакана
-            orders().removeIf(order -> {
-                if (order.getSymbol().equals(symbol)) {
-                    market.cancel(order);
-                    return true;
-                }
-                return false;
-            });
+            cancelActiveOrders(market, symbol, 1.0);
         }
 
-        long pt = market.getMarketPrice(symbol);
+        long pt = market.getMidPrice(symbol);
         if (pt == 0) return newOrders;
 
-        // Рассчитываем объем котировки (целевой объем $50,000)
-        long quantity = Math.max(1, Math.round(50000.0 / ((double) pt / 100_000_000.0)));
+        long quantity = calculateOrderQuantity(pt, symbol, 10.0);
 
         // 3. Состояние стресса (Экстренный сброс баланса рыночными ордерами)
         if (state == State.STRESSED) {
@@ -92,15 +85,7 @@ public class MarketMaker extends AbstractTrader {
             return newOrders;
         }
 
-        // 4. - Нормальное состояние (Котирование)
-        // Отмена старых котировок с вероятностью delta для данного символа
-        orders().removeIf(order -> {
-            if (order.getSymbol().equals(symbol) && random.nextDouble() < getDelta()) {
-                market.cancel(order);
-                return true;
-            }
-            return false;
-        });
+        cancelActiveOrders(market, symbol, getDelta());
 
         // Выставляем котировку (BUY и SELL лимитные ордера одновременно)
         if (random.nextDouble() < getTheta()) {
@@ -125,7 +110,6 @@ public class MarketMaker extends AbstractTrader {
             newOrders.add(buyQuote);
             newOrders.add(sellQuote);
         }
-
         return newOrders;
     }
 }

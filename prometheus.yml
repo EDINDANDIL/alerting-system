@@ -6,3 +6,8 @@ scrape_configs:
     metrics_path: '/metrics'
     static_configs:
       - targets: ['filter-service:8086'] # опрашиваем приватный порт Kora внутри докер-сети
+
+  - job_name: 'parser'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['parser:8085']

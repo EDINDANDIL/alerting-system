@@ -34,8 +34,11 @@ dependencies {
     implementation "ru.tinkoff.kora:http-server-undertow"
     implementation "ru.tinkoff.kora:json-module"
     implementation "ru.tinkoff.kora:config-hocon"
-    implementation "ch.qos.logback:logback-classic:1.4.8"
+    implementation 'ch.qos.logback:logback-classic:1.5.13'
+    implementation "ru.tinkoff.kora:logging-logback"
     implementation "ru.tinkoff.kora:kafka"
     // Source: https://mvnrepository.com/artifact/org.projectlombok/lombok
-    implementation 'org.projectlombok:lombok:1.18.46'
+    compileOnly 'org.projectlombok:lombok:1.18.46'
+    annotationProcessor 'org.projectlombok:lombok:1.18.46'
+    implementation "ru.tinkoff.kora:micrometer-module"
 }

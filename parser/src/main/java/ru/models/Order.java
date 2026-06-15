@@ -1,14 +1,12 @@
 package ru.models;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Getter
-@Setter
 @ToString
 public class Order {
 

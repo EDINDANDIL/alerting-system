@@ -18,42 +18,43 @@ public final class TraderFactory {
     // Баланс для маркет-мейкеров ($10,000,000 в масштабе 10^8)
     private static final long MM_BALANCE = 10_000_000_00000000L;
 
-    public static List<Trader> fundamentalTrader(int count, List<String> symbols, Map<String, Long> targetValues) {
-        return Stream.generate(() -> fundamentalTrader(targetValues, symbols))
+    public static List<Trader> fundamentalTrader(int count, List<String> symbols, Map<String, Long> targetValues, Map<String, Double> targetUsdVolumes) {
+        return Stream.generate(() -> fundamentalTrader(targetValues, symbols, targetUsdVolumes))
                 .limit(count)
                 .collect(Collectors.toList());
     }
 
-    public static Trader fundamentalTrader(Map<String, Long> targetValues, List<String> symbols) {
+    public static Trader fundamentalTrader(Map<String, Long> targetValues, List<String> symbols, Map<String, Double> targetUsdVolumes) {
         return new FundamentalTrader(
                 DEFAULT_BALANCE,
                 1.5,  // kappa1 (линейный спрос)
                 0.8,  // kappa2 (кубический спрос)
                 5,    // interval (проверка раз в 5 тиков)
                 symbols,
-                targetValues
+                targetValues,
+                targetUsdVolumes
         );
     }
 
-    public static List<Trader> momentumTrader(int count, List<String> symbols) {
+    public static List<Trader> momentumTrader(int count, List<String> symbols, Map<String, Double> targetUsdVolumes) {
         return IntStream.range(0, count)
-                .mapToObj(i -> i % 2 == 0 ? shortTermMomentumTrader(symbols) : longTermMomentumTrader(symbols))
+                .mapToObj(i -> i % 2 == 0 ? shortTermMomentumTrader(symbols, targetUsdVolumes) : longTermMomentumTrader(symbols, targetUsdVolumes))
                 .collect(Collectors.toList());
     }
 
-    public static List<Trader> longTermMomentumTrader(int count, List<String> symbols) {
-        return Stream.generate(() -> longTermMomentumTrader(symbols))
+    public static List<Trader> longTermMomentumTrader(int count, List<String> symbols, Map<String, Double> targetUsdVolumes) {
+        return Stream.generate(() -> longTermMomentumTrader(symbols, targetUsdVolumes))
                 .limit(count)
                 .collect(Collectors.toList());
     }
 
-    public static List<Trader> shortTermMomentumTrader(int count, List<String> symbols) {
-        return Stream.generate(() -> shortTermMomentumTrader(symbols))
+    public static List<Trader> shortTermMomentumTrader(int count, List<String> symbols, Map<String, Double> targetUsdVolumes) {
+        return Stream.generate(() -> shortTermMomentumTrader(symbols, targetUsdVolumes))
                 .limit(count)
                 .collect(Collectors.toList());
     }
 
-    public static Trader longTermMomentumTrader(List<String> symbols) {
+    public static Trader longTermMomentumTrader(List<String> symbols, Map<String, Double> targetUsdVolumes) {
         return new MomentumTrader(
                 0.15, // theta
                 0.05, // mu
@@ -65,11 +66,12 @@ public final class TraderFactory {
                 0.5,  // rho
                 0.005,
                 0.002,
-                symbols
+                symbols,
+                targetUsdVolumes
         );
     }
 
-    public static Trader shortTermMomentumTrader(List<String> symbols) {
+    public static Trader shortTermMomentumTrader(List<String> symbols, Map<String, Double> targetUsdVolumes) {
         return new MomentumTrader(
                 0.15, // theta
                 0.05, // mu
@@ -81,17 +83,18 @@ public final class TraderFactory {
                 0.5,  // rho
                 0.005,
                 0.002,
-                symbols
+                symbols,
+                targetUsdVolumes
         );
     }
 
-    public static List<Trader> noiseTrader(int count, List<String> symbols) {
-        return Stream.generate(() -> noiseTrader(symbols))
+    public static List<Trader> noiseTrader(int count, List<String> symbols, Map<String, Double> targetUsdVolumes) {
+        return Stream.generate(() -> noiseTrader(symbols, targetUsdVolumes))
                 .limit(count)
                 .collect(Collectors.toList());
     }
 
-    public static Trader noiseTrader(List<String> symbols) {
+    public static Trader noiseTrader(List<String> symbols, Map<String, Double> targetUsdVolumes) {
         return new NoiseTrader(
                 0.25, // theta
                 0.15, // mu
@@ -99,17 +102,18 @@ public final class TraderFactory {
                 DEFAULT_BALANCE,
                 0.005, // muL
                 0.002,  // sigmaL
-                symbols
+                symbols,
+                targetUsdVolumes
         );
     }
 
-    public static List<Trader> marketMaker(int count, List<String> symbols) {
-        return Stream.generate(() -> marketMaker(symbols))
+    public static List<Trader> marketMaker(int count, List<String> symbols, Map<String, Double> targetUsdVolumes) {
+        return Stream.generate(() -> marketMaker(symbols, targetUsdVolumes))
                 .limit(count)
                 .collect(Collectors.toList());
     }
 
-    public static Trader marketMaker(List<String> symbols) {
+    public static Trader marketMaker(List<String> symbols, Map<String, Double> targetUsdVolumes) {
         return new MarketMaker(
                 0.6,  // theta
                 0.08, // delta
@@ -118,7 +122,8 @@ public final class TraderFactory {
                 5000L, // limit
                 1000L, // safe
                 20L,    // cooldownTicks
-                symbols
+                symbols,
+                targetUsdVolumes
         );
     }
 }

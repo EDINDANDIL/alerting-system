@@ -14,29 +14,29 @@ public class MomentumTrader extends AbstractTrader {
     private final double rho;   // Соотношение рынок/лимит
     private final double muL;
     private final double sigmaL;
-    private final List<String> symbols; // Список торгуемых монет
 
     // Состояние тренда и цен изолировано по каждой монете
     private final Map<String, Double> mtMap = new HashMap<>();
     private final Map<String, Long> lastPriceMap = new HashMap<>();
 
-    public MomentumTrader(double theta, double mu, double delta, long balance, 
-                          double alpha, double beta, double gamma, double rho, double muL, double sigmaL,
-                          List<String> symbols) {
-        super(theta, mu, delta, balance);
+    public MomentumTrader(
+            double theta, double mu, double delta, long balance,
+            double alpha, double beta, double gamma, double rho, double muL, double sigmaL,
+            List<String> symbols, Map<String, Double> targetUsdVolumes)
+    {
+        super(theta, mu, delta, balance, symbols, targetUsdVolumes);
         this.alpha = alpha;
         this.beta = beta;
         this.gamma = gamma;
         this.rho = rho;
         this.muL = muL;
         this.sigmaL = sigmaL;
-        this.symbols = symbols;
     }
 
     @Override
     public List<Order> tick(Exchange market, long currentTick) {
         List<Order> newOrders = new ArrayList<>();
-        for (String symbol : symbols) {
+        for (String symbol : getSymbols()) {
             newOrders.addAll(tickForSymbol(market, symbol, currentTick));
         }
         return newOrders;
@@ -44,21 +44,14 @@ public class MomentumTrader extends AbstractTrader {
 
     private List<Order> tickForSymbol(Exchange market, String symbol, long currentTick) {
         List<Order> newOrders = new ArrayList<>();
-        long pt = market.getMarketPrice(symbol);
+        long pt = market.getMidPrice(symbol);
 
         // 1. Отмена старых ордеров для данного символа
-        orders().removeIf(order -> {
-            if (order.getSymbol().equals(symbol) && random.nextDouble() < getDelta()) {
-                market.cancel(order);
-                return true;
-            }
-            return false;
-        });
+        cancelActiveOrders(market, symbol, getDelta());
 
         if (pt == 0) return newOrders; // Если торгов еще не было, тренд не считаем
 
-        // Рассчитываем объем ордера (целевой объем сделки $5,000)
-        long quantity = Math.max(1, Math.round(5000.0 / ((double) pt / 100_000_000.0)));
+        long quantity = calculateOrderQuantity(pt, symbol, 1.0);
         
         // 2. Расчет тренда Mt для конкретной монеты (на основе процентного изменения цены)
         double mt = mtMap.getOrDefault(symbol, 0.0);
@@ -84,18 +77,7 @@ public class MomentumTrader extends AbstractTrader {
 
         // 4. Генерация лимитного ордера
         if (random.nextDouble() < currentTheta) {
-            double x = muL + sigmaL * random.nextGaussian();
-            // Масштабируем абсолютную дистанцию ($1 в калибровке) пропорционально цене актива
-            long distance = Math.round(Math.exp(x) * pt / 50000.0);
-            long price = (side == Side.BUY) ? (pt - distance) : (pt + distance);
-
-            // Округляем до tickSize
-            long tickSize = market.getTickSize(symbol);
-            price = Math.round((double) price / tickSize) * tickSize;
-            
-            Order limitOrder = new Order(this, Type.LIMIT, side, symbol, price, quantity);
-            addOrder(limitOrder);
-            newOrders.add(limitOrder);
+            newOrders.add(generateLimitOrder(market, symbol, side, pt, quantity, muL, sigmaL));
         }
 
         // 5. Генерация рыночного ордера
