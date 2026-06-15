@@ -1,0 +1,11 @@
+package ru.dto;
+
+import ru.tinkoff.kora.json.common.annotation.Json;
+import java.util.List;
+
+@Json
+public record OrderBookSnapshot(
+        String symbol,
+        List<MarketLevel> bids,
+        List<MarketLevel> asks
+) {}

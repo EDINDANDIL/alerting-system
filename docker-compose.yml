@@ -192,35 +192,35 @@ services:
       kafka-init:
         condition: service_completed_successfully
 
-  cxet-kafka-service:
-    build:
-      context: ./templates/CppService/CXETCPP
-      dockerfile: kafka/Dockerfile
-    image: cxetcpp-kafka-service:local
-    container_name: cxet-kafka-service
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
-      CXET_GROUP_ID: "cxet-kafka-service"
-      CXET_COMMAND_TOPIC: "command-topic"
-      CXET_REPLY_TOPIC: "cxet.replies"
-      CXET_TRADES_TOPIC: "trades-topic"
-    command:
-      - --bootstrap
-      - kafka:9092
-      - --group-id
-      - cxet-kafka-service
-      - --command-topic
-      - command-topic
-      - --reply-topic
-      - cxet.replies
-      - --trades-topic
-      - trades-topic
-    networks:
-      - alyarma
-    depends_on:
-      kafka-init:
-        condition: service_completed_successfully
-    restart: unless-stopped
+#  cxet-kafka-service:
+#    build:
+#      context: ./templates/CppService/CXETCPP
+#      dockerfile: kafka/Dockerfile
+#    image: cxetcpp-kafka-service:local
+#    container_name: cxet-kafka-service
+#    environment:
+#      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+#      CXET_GROUP_ID: "cxet-kafka-service"
+#      CXET_COMMAND_TOPIC: "command-topic"
+#      CXET_REPLY_TOPIC: "cxet.replies"
+#      CXET_TRADES_TOPIC: "trades-topic"
+#    command:
+#      - --bootstrap
+#      - kafka:9092
+#      - --group-id
+#      - cxet-kafka-service
+#      - --command-topic
+#      - command-topic
+#      - --reply-topic
+#      - cxet.replies
+#      - --trades-topic
+#      - trades-topic
+#    networks:
+#      - alyarma
+#    depends_on:
+#      kafka-init:
+#        condition: service_completed_successfully
+#    restart: unless-stopped
 
   prometheus:
       image: prom/prometheus:v2.51.0

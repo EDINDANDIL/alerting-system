@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation Control & Market Monitor</title>
+  <link rel="stylesheet" href="/style.css">
+  <!-- TradingView Lightweight Charts CDN -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+  <div class="sim-app-container">
+    <!-- Top Header / Navigation Bar -->
+    <header class="sim-header">
+      <div class="header-left">
+        <span class="header-title">SIMULATOR TERMINAL</span>
+      </div>
+      
+      <!-- Active symbol (visible only when selected) -->
+      <div id="status-panel" class="status-indicator" style="display: none;">
+        <span id="active-symbol-title" class="active-symbol">BTC</span>
+      </div>
+
+      <!-- Global simulator controls (Always visible) -->
+      <div class="status-indicator">
+        <div class="status-badge-container">
+          <span id="badge-dot" class="status-dot stopped"></span>
+          <span id="badge-status-text" class="status-text">STOPPED</span>
+        </div>
+        <span id="tick-counter" class="tick-counter">TICK: 0</span>
+        <button id="btn-start-sim" class="btn-action btn-start" disabled>START</button>
+        <button id="btn-stop-sim" class="btn-action btn-stop" disabled>STOP</button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="sim-content">
+      <!-- Sidebar: List of available symbols -->
+      <aside class="sim-sidebar">
+        <div class="search-box">
+          <input type="text" id="search-input" class="search-input" placeholder="Search instrument...">
+        </div>
+        <div id="symbols-list" class="symbols-list">
+          <div class="loading-state">Loading instruments...</div>
+        </div>
+      </aside>
+
+      <!-- Workspace Area: Chart and Order Book -->
+      <section id="sim-workspace" class="sim-workspace">
+        <!-- Placeholder when no instrument is selected -->
+        <div id="placeholder-panel" class="placeholder-panel">
+          <h3>No Instrument Selected</h3>
+          <p>Select a trading pair from the left panel to establish a real-time SSE connection and monitor order book depth and tick history.</p>
+        </div>
+
+        <!-- Real Workspace Grid -->
+        <div id="workspace-grid" class="workspace-grid" style="display: none;">
+          <!-- Left Column: Chart -->
+          <div class="chart-card">
+            <div class="card-header">
+              <span class="card-title">PRICE HISTORY</span>
+              <div class="chart-controls">
+                <span id="connection-error" class="connection-error" style="display: none;">DISCONNECTED</span>
+                <!-- Toggle switch between Line and Candles -->
+                <div class="toggle-container">
+                  <button id="btn-chart-line" class="btn-toggle active">Line</button>
+                  <button id="btn-chart-candles" class="btn-toggle">Candles (1s)</button>
+                </div>
+              </div>
+            </div>
+            <div class="chart-body">
+              <div id="chart-container"></div>
+            </div>
+          </div>
+
+          <!-- Right Column: Order Book (Depth) -->
+          <div class="orderbook-card">
+            <div class="card-header">
+              <span class="card-title">ORDER BOOK (15L)</span>
+            </div>
+            
+            <div class="ob-headers">
+              <span>PRICE ($)</span>
+              <span style="text-align: right;">SIZE</span>
+              <span style="text-align: right;">TOTAL ($)</span>
+            </div>
+
+            <div class="ob-body">
+              <!-- ASKS (Sells) -->
+              <div id="asks-list" class="asks-list"></div>
+
+              <!-- Spread bar -->
+              <div class="spread-bar">
+                <span class="spread-label">SPREAD:</span>
+                <span id="spread-value" class="spread-value">0.00000</span>
+              </div>
+
+              <!-- BIDS (Buys) -->
+              <div id="bids-list" class="bids-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
