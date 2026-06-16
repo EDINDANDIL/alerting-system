@@ -21,7 +21,6 @@ public class MomentumTrader extends AbstractTrader {
     private final double muL;
     private final double sigmaL;
 
-    // Состояние тренда и цен изолировано по каждой монете
     private final Map<String, Double> mtMap = new HashMap<>();
     private final Map<String, Long> lastPriceMap = new HashMap<>();
 
@@ -58,14 +57,12 @@ public class MomentumTrader extends AbstractTrader {
         List<Order> newOrders = new ArrayList<>();
         long pt = market.getMidPrice(symbol);
 
-        // 1. Отмена старых ордеров для данного символа
         cancelActiveOrders(market, symbol, getDelta());
 
-        if (pt == 0) return newOrders; // Если торгов еще не было, тренд не считаем
+        if (pt == 0) return newOrders;
 
         long quantity = calculateOrderQuantity(pt, symbol, 1.0);
         
-        // 2. Расчет тренда Mt для конкретной монеты (на основе процентного изменения цены)
         double mt = mtMap.getOrDefault(symbol, 0.0);
         long lastPrice = lastPriceMap.getOrDefault(symbol, 0L);
 
@@ -78,9 +75,6 @@ public class MomentumTrader extends AbstractTrader {
         mtMap.put(symbol, mt);
         lastPriceMap.put(symbol, lastPrice);
 
-        // 3. Расчет вероятностей на основе гиперболического тангенса
-        // Так как доходности малы (например, 0.01 за шаг = 1%), масштабируем mt на 100,
-        // чтобы demand соответствовал масштабу исходной калибровки в долларовом пространстве.
         double demand = beta * Math.tanh(gamma * mt * 100.0);
         double currentTheta = Math.abs(demand);
         double currentMu = currentTheta * rho;

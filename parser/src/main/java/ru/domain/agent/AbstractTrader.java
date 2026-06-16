@@ -78,13 +78,12 @@ public abstract class AbstractTrader implements Trader {
         private final static AtomicLong counter = new AtomicLong(1);
         public static long id() {return counter.getAndIncrement();}
     }
+
     protected void cancelActiveOrders(Exchange market, String symbol, double probability) {
         List<Order> toCancel = new ArrayList<>();
         for (Order order : orders()) {
             if (order.getSymbol().equals(symbol)) {
-                if (probability >= 1.0 || random.nextDouble() < probability) {
-                    toCancel.add(order);
-                }
+                if (probability >= 1.0 || random.nextDouble() < probability) toCancel.add(order);
             }
         }
         for (Order order : toCancel) {
@@ -98,6 +97,7 @@ public abstract class AbstractTrader implements Trader {
         double targetVolume = getTargetUsdVolume(symbol) * volumeMultiplier;
         return Math.max(1, Math.round(targetVolume / ((double) midPrice / 100_000_000.0)));
     }
+
     protected Order generateLimitOrder(Exchange market, String symbol, Side side, long midPrice, long quantity, double muL, double sigmaL) {
         double x = muL + sigmaL * random.nextGaussian();
         long distance = Math.round(Math.exp(x) * midPrice / 50000.0);

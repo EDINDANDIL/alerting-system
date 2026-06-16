@@ -26,8 +26,8 @@ public final class TraderFactory {
     public static Trader fundamentalTrader(List<String> symbols, Map<String, Double> targetUsdVolumes) {
         return new FundamentalTrader(
                 DEFAULT_BALANCE,
-                1.5,  // kappa1 (линейный спрос)
-                0.8,  // kappa2 (кубический спрос)
+                0.15,  // kappa1 (линейный спрос)
+                0.45,  // kappa2 (кубический спрос)
                 100,  // interval (проверка раз в 100 тиков, Table 7)
                 symbols,
                 targetUsdVolumes
@@ -59,8 +59,8 @@ public final class TraderFactory {
                 0.05, // delta
                 DEFAULT_BALANCE,
                 0.01,  // alpha (затухание для LMT, Table 7)
-                1.2,  // beta
-                5000.0, // gamma (масштабирует малые доходности за тик)
+                5.0,  // beta
+                10.0, // gamma (масштабирует малые доходности за тик)
                 0.5,  // rho
                 0.005,
                 0.002,
@@ -76,8 +76,8 @@ public final class TraderFactory {
                 0.05, // delta
                 DEFAULT_BALANCE,
                 0.9,  // alpha (затухание для SMT)
-                1.2,  // beta
-                5000.0, // gamma (масштабирует малые доходности за тик)
+                5.0,  // beta
+                10.0, // gamma (масштабирует малые доходности за тик)
                 0.5,  // rho
                 0.005,
                 0.002,
@@ -94,8 +94,8 @@ public final class TraderFactory {
 
     public static Trader noiseTrader(List<String> symbols, Map<String, Double> targetUsdVolumes) {
         return new NoiseTrader(
-                150.0, // sigmaNT (общая активность NT, нормируется на N_NT)
-                0.6,  // rho (соотношение market/limit)
+                30.0, // sigmaNT (общая активность NT, нормируется на N_NT)
+                0.85,  // rho (соотношение market/limit)
                 0.05, // delta
                 DEFAULT_BALANCE,
                 0.005, // muL
@@ -116,10 +116,10 @@ public final class TraderFactory {
                 0.6,  // theta
                 0.08, // delta
                 MM_BALANCE,
-                0.005, // pMmedge (0.5%)
-                5000L, // limit
+                0.0005, // pMmedge (0.5%)
+                50000L, // limit
                 101L,   // safe (ε_safe = 101, Table 7)
-                12000L, // cooldownTicks (ε_rest = 12000, Table 7)
+                5000L, // cooldownTicks (ε_rest = 12000, Table 7)
                 symbols,
                 targetUsdVolumes
         );

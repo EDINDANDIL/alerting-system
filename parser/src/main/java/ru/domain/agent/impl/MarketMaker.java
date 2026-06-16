@@ -21,7 +21,6 @@ public class MarketMaker extends AbstractTrader {
     private final long safe;            // Безопасный инвентарь
     private final long cooldownTicks;   // Время паузы в тиках
 
-    // Состояние и время паузы изолировано для каждой монеты
     private final Map<String, State> states = new HashMap<>();
     private final Map<String, Long> suspensionEndTicks = new HashMap<>();
 
@@ -59,7 +58,6 @@ public class MarketMaker extends AbstractTrader {
         State state = states.getOrDefault(symbol, State.NORMAL);
         long suspensionEndTick = suspensionEndTicks.getOrDefault(symbol, 0L);
 
-        // 1. Состояние паузы (Suspended)
         if (state == State.SUSPENDED) {
             if (currentTick >= suspensionEndTick) {
                 state = State.NORMAL;
@@ -69,16 +67,12 @@ public class MarketMaker extends AbstractTrader {
             }
         }
 
-        // 2. Проверка перехода в стрессовое состояние из нормального
         if (state == State.NORMAL && Math.abs(inventory) >= limit) {
             state = State.STRESSED;
             states.put(symbol, State.STRESSED);
-            // Снимаем все наши лимитки по этому символу из стакана
             cancelActiveOrders(market, symbol, 1.0);
         }
 
-        // Получаем среднюю цену из стакана, при пустом стакане — используем
-        // фундаментальную цену из контекста как fallback (разрыв мёртвой спирали)
         long pt = market.getMidPrice(symbol);
         boolean bookEmpty = (pt == 0);
         if (bookEmpty) {
@@ -88,21 +82,18 @@ public class MarketMaker extends AbstractTrader {
 
         long quantity = calculateOrderQuantity(pt, symbol, 10.0);
 
-        // 3. Состояние стресса (Экстренный сброс баланса рыночными ордерами)
         if (state == State.STRESSED) {
             if (Math.abs(inventory) <= safe) {
                 state = State.SUSPENDED;
                 states.put(symbol, State.SUSPENDED);
                 suspensionEndTicks.put(symbol, currentTick + cooldownTicks);
             } else {
-                // При пустом стакане маркетный ордер бесполезен — выставляем лимитку
                 if (!bookEmpty) {
                     Side side = inventory > 0 ? Side.SELL : Side.BUY;
                     Order marketOrder = new Order(this, Type.MARKET, side, symbol, 0, quantity);
                     newOrders.add(marketOrder);
                 }
             }
-            // В стрессе тоже выставляем котировки, если стакан пуст — чтобы восполнить ликвидность
             if (bookEmpty) {
                 newOrders.addAll(placeQuotes(market, symbol, pt, quantity));
             }
@@ -111,8 +102,6 @@ public class MarketMaker extends AbstractTrader {
 
         cancelActiveOrders(market, symbol, getDelta());
 
-        // Выставляем котировку (BUY и SELL лимитные ордера одновременно).
-        // При пустом стакане котируем ВСЕГДА для восстановления ликвидности.
         if (bookEmpty || random.nextDouble() < getTheta()) {
             newOrders.addAll(placeQuotes(market, symbol, pt, quantity));
         }

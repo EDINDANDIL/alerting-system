@@ -28,7 +28,6 @@ public class FundamentalTrader extends AbstractTrader {
         this.interval = interval;
     }
 
-
     @Override
     public TraderType type() {
         return TraderType.FUNDAMENTAL;
@@ -36,13 +35,12 @@ public class FundamentalTrader extends AbstractTrader {
 
     @Override
     public List<Order> tick(Exchange market, SimulationContext context) {
-        List<Order> newOrders = new ArrayList<>();
 
         long currentTick = context.getCurrentTick();
-        // Проверяем интервал хода
-        if (currentTick % interval != 0) {
-            return newOrders;
-        }
+
+        if (currentTick % interval != 0) return List.of();
+
+        List<Order> newOrders = new ArrayList<>();
 
         for (String symbol : getSymbols()) {
             long targetValue = context.getFundamentalPrice(symbol);
@@ -57,9 +55,7 @@ public class FundamentalTrader extends AbstractTrader {
             // чтобы логика оставалась независимой от абсолютной цены монеты.
             double diff = ((double) (targetValue - pt) / targetValue) * 100.0;
             
-            // Расчет кубического спроса (Section 3.7, Equation 2)
             double demand = kappa1 * diff + kappa2 * Math.pow(diff, 3);
-            // Нормировка на количество FT-агентов: μ = |D| / N_FT (по статье)
             int nFt = context.getRegistry().getCount(TraderType.FUNDAMENTAL);
             double currentMu = Math.abs(demand) / Math.max(1, nFt);
 

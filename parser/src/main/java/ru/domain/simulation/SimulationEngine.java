@@ -120,14 +120,15 @@ public class SimulationEngine implements Lifecycle {
                         long prevVal = currentFundamentalValues.getOrDefault(symbol, 100L * 100_000_000L);
 
                         // Базовая волатильность: σ = 0.001 (±0.1% за тик)
-                        double change = 1.0 + (ThreadLocalRandom.current().nextGaussian() * 0.001);
+//                        double change = 1.0 + (ThreadLocalRandom.current().nextGaussian() * 0.0001);
+                        double change = 1.0 + (ThreadLocalRandom.current().nextGaussian() * 0.00001);
 
                         // Редкие скачки (~1% шанс за тик) — имитация новостей/событий
                         // Амплитуда: 1-5% в случайном направлении
-                        if (ThreadLocalRandom.current().nextDouble() < 0.01) {
-                            double jumpSize = 0.01 + ThreadLocalRandom.current().nextDouble() * 0.04;
-                            change += (ThreadLocalRandom.current().nextBoolean() ? jumpSize : -jumpSize);
-                        }
+//                        if (ThreadLocalRandom.current().nextDouble() < 0.01) {
+//                            double jumpSize = 0.01 + ThreadLocalRandom.current().nextDouble() * 0.04;
+//                            change += (ThreadLocalRandom.current().nextBoolean() ? jumpSize : -jumpSize);
+//                        }
 
                         currentFundamentalValues.put(symbol, Math.round(prevVal * change));
                     }
