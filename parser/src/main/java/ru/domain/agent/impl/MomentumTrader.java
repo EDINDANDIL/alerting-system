@@ -89,7 +89,6 @@ public class MomentumTrader extends AbstractTrader {
             Order marketOrder = new Order(this, Type.MARKET, side, symbol, 0, quantity);
             newOrders.add(marketOrder);
         }
-
         return newOrders;
     }
 }

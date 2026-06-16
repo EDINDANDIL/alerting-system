@@ -31,6 +31,7 @@ public class SimulationEngine implements Lifecycle {
     private final Map<String, Long> currentFundamentalValues = new java.util.concurrent.ConcurrentHashMap<>();
     private List<Trader> traders;
     private Future<?> simulationTask;
+    private double currentVolatility = 0.00005;
 
     private final AgentRegistry agentRegistry = new AgentRegistryImpl();
     private final SimulationContext simulationContext = new SimulationContext() {
@@ -38,12 +39,10 @@ public class SimulationEngine implements Lifecycle {
         public long getCurrentTick() {
             return currentTick.get();
         }
-
         @Override
         public AgentRegistry getRegistry() {
             return agentRegistry;
         }
-
         @Override
         public long getFundamentalPrice(String symbol) {
             return currentFundamentalValues.getOrDefault(symbol, 0L);
@@ -56,10 +55,10 @@ public class SimulationEngine implements Lifecycle {
     }
 
     @Override
-    public void init() throws Exception {}
+    public void init() {}
 
     @Override
-    public void release() throws Exception {
+    public void release() {
         stop();
         loopExecutor.shutdown();
     }
@@ -116,19 +115,13 @@ public class SimulationEngine implements Lifecycle {
                         break;
                     }
 
+                    currentVolatility += (ThreadLocalRandom.current().nextGaussian() * 0.0000005);
+                    currentVolatility = Math.max(0.000005, Math.min(0.00005, currentVolatility));
+
                     for (String symbol : config.symbols()) {
                         long prevVal = currentFundamentalValues.getOrDefault(symbol, 100L * 100_000_000L);
 
-                        // Базовая волатильность: σ = 0.001 (±0.1% за тик)
-//                        double change = 1.0 + (ThreadLocalRandom.current().nextGaussian() * 0.0001);
-                        double change = 1.0 + (ThreadLocalRandom.current().nextGaussian() * 0.00001);
-
-                        // Редкие скачки (~1% шанс за тик) — имитация новостей/событий
-                        // Амплитуда: 1-5% в случайном направлении
-//                        if (ThreadLocalRandom.current().nextDouble() < 0.01) {
-//                            double jumpSize = 0.01 + ThreadLocalRandom.current().nextDouble() * 0.04;
-//                            change += (ThreadLocalRandom.current().nextBoolean() ? jumpSize : -jumpSize);
-//                        }
+                        double change = 1.0 + (ThreadLocalRandom.current().nextGaussian() * currentVolatility) + 0.000001;
 
                         currentFundamentalValues.put(symbol, Math.round(prevVal * change));
                     }
@@ -179,7 +172,6 @@ public class SimulationEngine implements Lifecycle {
             // Количество рассчитывается исходя из $50,000 стартовой ликвидности на уровень
             long quantity = Math.max(10, Math.round(50000.0 / startPriceUsd));
 
-            // Создаём 5 уровней глубины с каждой стороны для устойчивой начальной ликвидности
             for (int level = 1; level <= 5; level++) {
                 double spread = 0.002 * level; // 0.2%, 0.4%, 0.6%, 0.8%, 1.0%
                 long bidPrice = Math.round((initialPriceScaled * (1.0 - spread)) / tickSize) * tickSize;

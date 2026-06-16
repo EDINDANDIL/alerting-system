@@ -55,18 +55,15 @@ public class NoiseTrader extends AbstractTrader {
 
         long quantity = calculateOrderQuantity(marketPrice, symbol, 1.0);
 
-        // Нормировка на число NT-агентов: θ = σ_NT / N_NT (Section 3.13)
         int nNt = context.getRegistry().getCount(TraderType.NOISE);
         double currentTheta = sigmaNT / Math.max(1, nNt);
         double currentMu = currentTheta * rho;
 
-        // Лимитные ордера
         if (random.nextDouble() < currentTheta) {
             Side side = random.nextBoolean() ? Side.BUY : Side.SELL;
             newOrders.add(generateLimitOrder(market, symbol, side, marketPrice, quantity, muL, sigmaL));
         }
 
-        // Рыночные ордера
         if (random.nextDouble() < currentMu) {
             Side side = random.nextBoolean() ? Side.BUY : Side.SELL;
             Order marketOrder = new Order(this, Type.MARKET, side, symbol, 0, quantity);

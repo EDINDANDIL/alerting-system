@@ -92,10 +92,20 @@ public abstract class AbstractTrader implements Trader {
         }
     }
 
+//    protected long calculateOrderQuantity(long midPrice, String symbol, double volumeMultiplier) {
+//        if (midPrice == 0) return 0;
+//        double targetVolume = getTargetUsdVolume(symbol) * volumeMultiplier;
+//        return Math.max(1, Math.round(targetVolume / ((double) midPrice / 100_000_000.0)));
+//    }
+
     protected long calculateOrderQuantity(long midPrice, String symbol, double volumeMultiplier) {
-        if (midPrice == 0) return 0;
-        double targetVolume = getTargetUsdVolume(symbol) * volumeMultiplier;
-        return Math.max(1, Math.round(targetVolume / ((double) midPrice / 100_000_000.0)));
+             if (midPrice == 0) return 0;
+
+             // Добавляем случайный разброс объема (от 50% до 150% от расчетного)
+             double noiseMultiplier = 0.5 + random.nextDouble();
+
+             double targetVolume = getTargetUsdVolume(symbol) * volumeMultiplier * noiseMultiplier;
+             return Math.max(1, Math.round(targetVolume / ((double) midPrice / 100_000_000.0)));
     }
 
     protected Order generateLimitOrder(Exchange market, String symbol, Side side, long midPrice, long quantity, double muL, double sigmaL) {

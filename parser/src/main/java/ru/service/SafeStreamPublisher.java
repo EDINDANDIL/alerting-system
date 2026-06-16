@@ -53,9 +53,7 @@ public final class SafeStreamPublisher implements Flow.Publisher<ByteBuffer> {
     }
 
     public void submit(ByteBuffer item) {
-        if (!delegate.isClosed()) {
-            delegate.submit(item);
-        }
+        if (!delegate.isClosed()) delegate.submit(item);
     }
 
     public void close() {

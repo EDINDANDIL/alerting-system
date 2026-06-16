@@ -38,9 +38,7 @@ public final class MarketDataBroadcaster implements Lifecycle, Exchange.TradeLis
 
     @Override
     public void init() {
-        // Register self as trade listener to intercept match ticks instantly
         exchange.registerTradeListener(this);
-        // Periodically broadcast order book depth snapshots
         scheduler.scheduleAtFixedRate(this::broadcastDepth, 150, 150, TimeUnit.MILLISECONDS);
     }
 

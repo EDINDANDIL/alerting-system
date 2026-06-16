@@ -22,7 +22,7 @@ public class FundamentalTrader extends AbstractTrader {
             List<String> symbols,
             Map<String, Double> targetUsdVolumes) // <- минимальный объем денег для торговли по этой монете
     {
-        super(0.0, 0.0, 0.0, balance, symbols, targetUsdVolumes); // Лимиток нет (theta = 0, delta = 0)
+        super(0.0, 0.0, 0.0, balance, symbols, targetUsdVolumes);
         this.kappa1 = kappa1;
         this.kappa2 = kappa2;
         this.interval = interval;
@@ -51,8 +51,6 @@ public class FundamentalTrader extends AbstractTrader {
 
             long quantity = calculateOrderQuantity(pt, symbol, 1.0);
 
-            // Переводим разницу цен в относительные проценты перед расчетом спроса,
-            // чтобы логика оставалась независимой от абсолютной цены монеты.
             double diff = ((double) (targetValue - pt) / targetValue) * 100.0;
             
             double demand = kappa1 * diff + kappa2 * Math.pow(diff, 3);

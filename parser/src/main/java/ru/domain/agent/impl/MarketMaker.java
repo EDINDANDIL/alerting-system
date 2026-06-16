@@ -63,7 +63,7 @@ public class MarketMaker extends AbstractTrader {
                 state = State.NORMAL;
                 states.put(symbol, State.NORMAL);
             } else {
-                return newOrders; // Ничего не делаем
+                return newOrders;
             }
         }
 

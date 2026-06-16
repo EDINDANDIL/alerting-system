@@ -30,9 +30,7 @@ public class Order {
     }
 
     public void reduceCount(long quantity) {
-        if (quantity > this.count) {
-            throw new IllegalArgumentException("Cannot reduce order count below zero");
-        }
+        if (quantity > this.count) throw new IllegalArgumentException("Cannot reduce order count below zero");
         this.count -= quantity;
     }
 

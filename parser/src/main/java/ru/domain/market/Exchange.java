@@ -35,7 +35,7 @@ public class Exchange {
     }
 
     public long getTickSize(String symbol) {
-        return tickSizes.getOrDefault(symbol, 1000L); // Дефолтный шаг цены $0.00001 (1000 в масштабе 10^8)
+        return tickSizes.getOrDefault(symbol, 1000L);
     }
 
     public Exchange(TradePublisher publisher) {
@@ -77,7 +77,6 @@ public class Exchange {
     }
 
     private void send(List<TradeTick> trades, Order order) {
-        // Broadcast trades to registered UI listeners
         tradeListeners.forEach(listener -> {
             try {
                 listener.onTrades(order.getSymbol(), trades);

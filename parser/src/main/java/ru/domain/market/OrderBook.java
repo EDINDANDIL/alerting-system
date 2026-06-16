@@ -84,20 +84,19 @@ public class OrderBook {
 
     public synchronized OrderBookSnapshot getSnapshot(int depth) {
         List<MarketLevel> bidsSnapshot = bids.entrySet().stream()
-                .limit(depth)
-                .map(e -> new MarketLevel(
-                        e.getKey(),
-                        e.getValue().values().stream().mapToLong(Order::getCount).sum()
-                ))
-                .toList();
+        .limit(depth)
+        .map(e -> new MarketLevel(
+        e.getKey(),
+        e.getValue().values().stream().mapToLong(Order::getCount).sum()
+        )).toList();
 
         List<MarketLevel> asksSnapshot = asks.entrySet().stream()
-                .limit(depth)
-                .map(e -> new MarketLevel(
-                        e.getKey(),
-                        e.getValue().values().stream().mapToLong(Order::getCount).sum()
-                ))
-                .toList();
+        .limit(depth)
+        .map(e -> new MarketLevel(
+        e.getKey(),
+        e.getValue().values().stream().mapToLong(Order::getCount).sum()
+        ))
+        .toList();
 
         return new OrderBookSnapshot(name, bidsSnapshot, asksSnapshot);
     }
