@@ -24,7 +24,7 @@ public abstract class AbstractTrader implements Trader {
     private final Map<String, Long> inventory = new ConcurrentHashMap<>();
     @Getter private final List<String> symbols;
     private final Map<String, Double> targetUsdVolumes;
-    @Getter private volatile long balance;
+    @Getter private long balance;
 
     @Override
     public long id() {return id;}
@@ -54,7 +54,7 @@ public abstract class AbstractTrader implements Trader {
     }
 
     @Override
-    public synchronized void onOrderFilled(Order order, long price, long quantity) {
+    public void onOrderFilled(Order order, long price, long quantity) {
         String symbol = order.getSymbol();
         long currentAssetCount = getInventory(symbol);
 
@@ -95,7 +95,6 @@ public abstract class AbstractTrader implements Trader {
     protected long calculateOrderQuantity(long midPrice, String symbol, double volumeMultiplier) {
              if (midPrice == 0) return 0;
 
-             // Добавляем случайный разброс объема (от 50% до 150% от расчетного)
              double noiseMultiplier = 0.5 + random.nextDouble();
 
              double targetVolume = getTargetUsdVolume(symbol) * volumeMultiplier * noiseMultiplier;
