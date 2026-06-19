@@ -9,8 +9,7 @@ public final class TradeEventBinaryEncoder {
 
     private static final int MESSAGE_SIZE = 16;
 
-    private TradeEventBinaryEncoder() {
-    }
+    private TradeEventBinaryEncoder() {}
 
     public static byte[] encode(TradeTick event) {
         ByteBuffer buffer = ByteBuffer.allocate(MESSAGE_SIZE).order(ByteOrder.LITTLE_ENDIAN);

@@ -66,12 +66,9 @@ public class MomentumTrader extends AbstractTrader {
         double mt = mtMap.getOrDefault(symbol, 0.0);
         long lastPrice = lastPriceMap.getOrDefault(symbol, 0L);
 
-        if (lastPrice == 0) {
-            lastPrice = pt;
-        } else {
-            mt = (1 - alpha) * mt + alpha * ((double) (pt - lastPrice) / lastPrice);
-            lastPrice = pt;
-        }
+        if (lastPrice != 0) mt = (1 - alpha) * mt + alpha * ((double) (pt - lastPrice) / lastPrice);
+
+        lastPrice = pt;
         mtMap.put(symbol, mt);
         lastPriceMap.put(symbol, lastPrice);
 

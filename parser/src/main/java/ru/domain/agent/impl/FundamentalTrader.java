@@ -20,7 +20,7 @@ public class FundamentalTrader extends AbstractTrader {
     public FundamentalTrader(
             long balance, double kappa1, double kappa2, long interval,
             List<String> symbols,
-            Map<String, Double> targetUsdVolumes) // <- минимальный объем денег для торговли по этой монете
+            Map<String, Double> targetUsdVolumes)
     {
         super(0.0, 0.0, 0.0, balance, symbols, targetUsdVolumes);
         this.kappa1 = kappa1;

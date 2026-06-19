@@ -9,6 +9,5 @@ import java.util.concurrent.CompletionStage;
 
 @KafkaPublisher("kafka.TradesProducer")
 public interface TradePublisher {
-    @Log
     CompletionStage<RecordMetadata> send(ProducerRecord<String, byte[]> record);
 }

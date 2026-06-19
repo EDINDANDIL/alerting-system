@@ -92,12 +92,6 @@ public abstract class AbstractTrader implements Trader {
         }
     }
 
-//    protected long calculateOrderQuantity(long midPrice, String symbol, double volumeMultiplier) {
-//        if (midPrice == 0) return 0;
-//        double targetVolume = getTargetUsdVolume(symbol) * volumeMultiplier;
-//        return Math.max(1, Math.round(targetVolume / ((double) midPrice / 100_000_000.0)));
-//    }
-
     protected long calculateOrderQuantity(long midPrice, String symbol, double volumeMultiplier) {
              if (midPrice == 0) return 0;
 

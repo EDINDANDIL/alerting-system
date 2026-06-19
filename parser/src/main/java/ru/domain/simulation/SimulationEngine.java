@@ -136,9 +136,7 @@ public class SimulationEngine implements Lifecycle {
                                     exchange.order(order);
                                 }
                             }
-                        } catch (Exception e) {
-                            // Suppress to keep simulator alive
-                        }
+                        } catch (Exception _) {}
                     }
 
                     if (config.tickDelayMs() > 0) Thread.sleep(config.tickDelayMs());

@@ -84,9 +84,9 @@ public class MarketMaker extends AbstractTrader {
 
         if (state == State.STRESSED) {
             if (Math.abs(inventory) <= safe) {
-                state = State.SUSPENDED;
                 states.put(symbol, State.SUSPENDED);
                 suspensionEndTicks.put(symbol, currentTick + cooldownTicks);
+                return newOrders;
             } else {
                 if (!bookEmpty) {
                     Side side = inventory > 0 ? Side.SELL : Side.BUY;
