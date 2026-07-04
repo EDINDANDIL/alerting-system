@@ -52,36 +52,23 @@ public class MarketMaker extends AbstractTrader {
     }
 
     private List<Order> tickForSymbol(Exchange market, String symbol, long currentTick, SimulationContext context) {
-        List<Order> newOrders = new ArrayList<>();
-        long inventory = getInventory(symbol);
-
+        List<Order> newOrders = new ArrayList<>(); long inventory = getInventory(symbol);
         State state = states.getOrDefault(symbol, State.NORMAL);
         long suspensionEndTick = suspensionEndTicks.getOrDefault(symbol, 0L);
-
         if (state == State.SUSPENDED) {
             if (currentTick >= suspensionEndTick) {
                 state = State.NORMAL;
                 states.put(symbol, State.NORMAL);
-            } else {
-                return newOrders;
-            }
-        }
-
+            } else return newOrders;}
         if (state == State.NORMAL && Math.abs(inventory) >= limit) {
             state = State.STRESSED;
             states.put(symbol, State.STRESSED);
-            cancelActiveOrders(market, symbol, 1.0);
-        }
-
-        long pt = market.getMidPrice(symbol);
-        boolean bookEmpty = (pt == 0);
+            cancelActiveOrders(market, symbol, 1.0);}
+        long pt = market.getMidPrice(symbol); boolean bookEmpty = (pt == 0);
         if (bookEmpty) {
             pt = context.getFundamentalPrice(symbol);
-            if (pt <= 0) return newOrders; // Нет вообще никакой цены — пропускаем
-        }
-
+            if (pt <= 0) return newOrders;}
         long quantity = calculateOrderQuantity(pt, symbol, 10.0);
-
         if (state == State.STRESSED) {
             if (Math.abs(inventory) <= safe) {
                 states.put(symbol, State.SUSPENDED);
@@ -92,19 +79,11 @@ public class MarketMaker extends AbstractTrader {
                     Side side = inventory > 0 ? Side.SELL : Side.BUY;
                     Order marketOrder = new Order(this, Type.MARKET, side, symbol, 0, quantity);
                     newOrders.add(marketOrder);
-                }
-            }
-            if (bookEmpty) {
-                newOrders.addAll(placeQuotes(market, symbol, pt, quantity));
-            }
-            return newOrders;
-        }
-
+                }}
+            if (bookEmpty) newOrders.addAll(placeQuotes(market, symbol, pt, quantity));
+            return newOrders;}
         cancelActiveOrders(market, symbol, getDelta());
-
-        if (bookEmpty || random.nextDouble() < getTheta()) {
-            newOrders.addAll(placeQuotes(market, symbol, pt, quantity));
-        }
+        if (bookEmpty || random.nextDouble() < getTheta()) newOrders.addAll(placeQuotes(market, symbol, pt, quantity));
         return newOrders;
     }
 

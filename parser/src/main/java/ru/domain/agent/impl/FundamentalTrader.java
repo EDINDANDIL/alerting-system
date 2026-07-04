@@ -66,3 +66,4 @@ public class FundamentalTrader extends AbstractTrader {
         return newOrders;
     }
 }
+
