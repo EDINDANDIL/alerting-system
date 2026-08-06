@@ -19,8 +19,6 @@ import ru.common.util.OutboxOperation;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 @Component
 public final class ImpulseService implements FilterService {
@@ -30,43 +28,32 @@ public final class ImpulseService implements FilterService {
     private final OutboxRepository outboxRepository;
     private final ImpulseFilterMapper impulseMapper;
     private final OutboxMapperFacade mapperFacade;
-    private final DBExecutor executor;
     private static final Logger log = LoggerFactory.getLogger(ImpulseService.class);
 
-    public ImpulseService(ImpulseFiltersRepository impFiltersRepo, UserImpulseFiltersRepository userImpFilterRepo, OutboxRepository outboxRepository, ImpulseFilterMapper impulseMapper, OutboxMapperFacade mapperFacade, DBExecutor executor) {
+    public ImpulseService(ImpulseFiltersRepository impFiltersRepo, UserImpulseFiltersRepository userImpFilterRepo, OutboxRepository outboxRepository, ImpulseFilterMapper impulseMapper, OutboxMapperFacade mapperFacade) {
         this.impFiltersRepo = impFiltersRepo;
         this.userImpFilterRepo = userImpFilterRepo;
         this.outboxRepository = outboxRepository;
         this.impulseMapper = impulseMapper;
         this.mapperFacade = mapperFacade;
-        this.executor = executor;
     }
 
     @Override
-    public CompletionStage<Response> subscribe(long userId, Request dto) {
-        return CompletableFuture.supplyAsync(
-                () -> performSubscribe(userId, (Request.ImpulseFilterDto) dto),
-                executor.executor()
-        );
+    public Response subscribe(long userId, Request dto) {
+        return performSubscribe(userId, (Request.ImpulseFilterDto) dto);
     }
 
     @Override
-    public CompletionStage<Void> unsubscribe(long userId, long filterId) {
-        return CompletableFuture.runAsync(
-                () -> performUnsubscribe(userId, filterId),
-                executor.executor()
-        );
+    public void unsubscribe(long userId, long filterId) {
+        performUnsubscribe(userId, filterId);
     }
 
     @Override
-    public CompletableFuture<List<Response>> findFiltersByUserId(long id) {
-        return CompletableFuture.supplyAsync(
-                () -> impFiltersRepo.findFiltersByUserId(id).stream()
-                            .map(impulseMapper::toResponse)
-                            .map(Response.class::cast)
-                            .toList(),
-                executor.executor()
-        );
+    public List<Response> findFiltersByUserId(long id) {
+        return impFiltersRepo.findFiltersByUserId(id).stream()
+                .map(impulseMapper::toResponse)
+                .map(Response.class::cast)
+                .toList();
     }
 
     private Response performSubscribe(long userId, Request.ImpulseFilterDto dto) {

@@ -18,8 +18,6 @@ import ru.tinkoff.kora.json.common.annotation.Json;
 import ru.util.FilterServiceRegistry;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 @Component
 @HttpController
@@ -33,7 +31,7 @@ public class FilterController {
 
     @Json
     @HttpRoute(method = HttpMethod.POST, path = "/api/filters/{type}")
-    public CompletionStage<HttpResponseEntity<Response>> subscribe(
+    public HttpResponseEntity<Response> subscribe(
             @Json Request dto,
             @Path FilterType type
     ) {
@@ -43,12 +41,12 @@ public class FilterController {
 
         FilterService service = filterServiceRegistry.getService(type);
 
-        return service.subscribe(userId, dto)
-                .thenApply(response -> HttpResponseEntity.of(201, response));
+        Response response = service.subscribe(userId, dto);
+        return HttpResponseEntity.of(201, response);
     }
 
     @HttpRoute(method = HttpMethod.DELETE, path = "/api/filters/{type}/{id}")
-    public CompletionStage<HttpServerResponse> unsubscribe(
+    public HttpServerResponse unsubscribe(
             @Path FilterType type,
             @Path long id
     ) {
@@ -58,26 +56,22 @@ public class FilterController {
 
         FilterService service = filterServiceRegistry.getService(type);
 
-        return service.unsubscribe(userId, id)
-                .thenApply(ignored -> HttpServerResponse.of(204));
+        service.unsubscribe(userId, id);
+        return HttpServerResponse.of(204);
     }
 
     @Json
     @HttpRoute(method = HttpMethod.GET, path = "/api/filters")
-    public CompletionStage<HttpResponseEntity<List<Response>>> getAllFilters() {
+    public HttpResponseEntity<List<Response>> getAllFilters() {
         Long userId = Context.current().get(AuthInterceptor.USER_ID_KEY);
 
         if (userId == null) throw new UserNotFoundException("User not found");
 
-        List<CompletableFuture<List<Response>>> futures = filterServiceRegistry.allFilterServices()
+        List<Response> filters = filterServiceRegistry.allFilterServices()
                 .stream()
-                .map(service -> service.findFiltersByUserId(userId).toCompletableFuture())
+                .flatMap(service -> service.findFiltersByUserId(userId).stream())
                 .toList();
 
-        return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
-                .thenApply(ignored -> futures.stream()
-                        .flatMap(future -> future.join().stream())
-                        .toList())
-                .thenApply(filters -> HttpResponseEntity.of(200, filters));
+        return HttpResponseEntity.of(200, filters);
     }
 }

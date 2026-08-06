@@ -1,6 +1,5 @@
 package ru.services;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -33,7 +32,6 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,7 +45,6 @@ class ImpulseServiceTest {
     private ImpulseFiltersRepository filtersRepository;
     private UserImpulseFiltersRepository userFiltersRepository;
     private OutboxRepository outboxRepository;
-    private DBExecutor dbExecutor;
     private ImpulseService service;
 
     @BeforeEach
@@ -55,7 +52,6 @@ class ImpulseServiceTest {
         filtersRepository = mock(ImpulseFiltersRepository.class);
         userFiltersRepository = mock(UserImpulseFiltersRepository.class);
         outboxRepository = mock(OutboxRepository.class);
-        dbExecutor = new DBExecutor();
 
         JdbcConnectionFactory tx = new ImmediateTxConnectionFactory();
         when(filtersRepository.getJdbcConnectionFactory()).thenReturn(tx);
@@ -66,14 +62,8 @@ class ImpulseServiceTest {
                 userFiltersRepository,
                 outboxRepository,
                 new TestImpulseFilterMapper(),
-                new OutboxMapperFacade(new TestEventOutboxMapper()),
-                dbExecutor
+                new OutboxMapperFacade(new TestEventOutboxMapper())
         );
-    }
-
-    @AfterEach
-    void tearDown() {
-        dbExecutor.close();
     }
 
     @Test
@@ -86,7 +76,7 @@ class ImpulseServiceTest {
         when(userFiltersRepository.subscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(1));
         when(outboxRepository.insert(any())).thenReturn(100L, 101L);
 
-        Response response = service.subscribe(USER_ID, request).toCompletableFuture().join();
+        Response response = service.subscribe(USER_ID, request);
 
         assertEquals(new TestImpulseFilterMapper().toResponse(created), response);
         verify(filtersRepository).insert(any());
@@ -107,14 +97,13 @@ class ImpulseServiceTest {
         when(filtersRepository.findByConfig(any())).thenReturn(Optional.of(existing));
         when(userFiltersRepository.subscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(0));
 
-        Response response = service.subscribe(USER_ID, request).toCompletableFuture().join();
+        Response response = service.subscribe(USER_ID, request);
 
         assertEquals(new TestImpulseFilterMapper().toResponse(existing), response);
         verify(filtersRepository, never()).insert(any());
         verify(outboxRepository, never()).insert(any());
     }
 
-    //TODO посмотреть тесты
     @Test
     void subscribe_reusesExistingFilterAndWritesOnlySubscribeEventForNewSubscription() {
         Request.ImpulseFilterDto request = request();
@@ -124,7 +113,7 @@ class ImpulseServiceTest {
         when(userFiltersRepository.subscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(1));
         when(outboxRepository.insert(any())).thenReturn(100L);
 
-        Response response = service.subscribe(USER_ID, request).toCompletableFuture().join();
+        Response response = service.subscribe(USER_ID, request);
 
         assertEquals(new TestImpulseFilterMapper().toResponse(existing), response);
         verify(filtersRepository, never()).insert(any());
@@ -139,7 +128,6 @@ class ImpulseServiceTest {
         assertNull(events.getFirst().payload());
     }
 
-    //TODO посмотреть тесты
     @Test
     void subscribe_createAndSubscribeEventsContainExpectedFields() {
         Request.ImpulseFilterDto request = request();
@@ -150,7 +138,7 @@ class ImpulseServiceTest {
         when(userFiltersRepository.subscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(1));
         when(outboxRepository.insert(any())).thenReturn(100L, 101L);
 
-        service.subscribe(USER_ID, request).toCompletableFuture().join();
+        service.subscribe(USER_ID, request);
 
         List<FilterOutboxEntity> events = capturedOutboxEvents();
         FilterOutboxEntity create = events.get(0);
@@ -187,7 +175,7 @@ class ImpulseServiceTest {
         when(userFiltersRepository.countByImpulseId(FILTER_ID)).thenReturn(2L);
         when(outboxRepository.insert(any())).thenReturn(200L);
 
-        service.unsubscribe(USER_ID, FILTER_ID).toCompletableFuture().join();
+        service.unsubscribe(USER_ID, FILTER_ID);
 
         verify(filtersRepository, never()).deleteById(anyLong());
         List<FilterOutboxEntity> events = capturedOutboxEvents();
@@ -206,7 +194,7 @@ class ImpulseServiceTest {
         when(filtersRepository.deleteById(FILTER_ID)).thenReturn(new UpdateCount(1));
         when(outboxRepository.insert(any())).thenReturn(200L, 201L);
 
-        service.unsubscribe(USER_ID, FILTER_ID).toCompletableFuture().join();
+        service.unsubscribe(USER_ID, FILTER_ID);
 
         verify(filtersRepository).deleteById(FILTER_ID);
         List<FilterOutboxEntity> events = capturedOutboxEvents();
@@ -216,7 +204,6 @@ class ImpulseServiceTest {
         assertNull(events.get(1).payload());
     }
 
-    //TODO посмотреть тесты
     @Test
     void findFiltersByUserId_returnsMappedResponses() {
         ImpulseFilterEntity first = entity(10L);
@@ -234,7 +221,7 @@ class ImpulseServiceTest {
 
         when(filtersRepository.findFiltersByUserId(USER_ID)).thenReturn(List.of(first, second));
 
-        List<Response> responses = service.findFiltersByUserId(USER_ID).toCompletableFuture().join();
+        List<Response> responses = service.findFiltersByUserId(USER_ID);
 
         assertEquals(List.of(
                 new TestImpulseFilterMapper().toResponse(first),
@@ -246,12 +233,11 @@ class ImpulseServiceTest {
         verify(userFiltersRepository, never()).unsubscribe(anyLong(), anyLong());
     }
 
-    //TODO посмотреть тесты
     @Test
     void findFiltersByUserId_returnsEmptyListWhenRepositoryReturnsNoFilters() {
         when(filtersRepository.findFiltersByUserId(USER_ID)).thenReturn(List.of());
 
-        List<Response> responses = service.findFiltersByUserId(USER_ID).toCompletableFuture().join();
+        List<Response> responses = service.findFiltersByUserId(USER_ID);
 
         assertTrue(responses.isEmpty());
         verify(filtersRepository).findFiltersByUserId(USER_ID);
@@ -262,12 +248,11 @@ class ImpulseServiceTest {
     void unsubscribe_failsWhenFilterDoesNotExist() {
         when(filtersRepository.findFilterById(FILTER_ID)).thenReturn(Optional.empty());
 
-        CompletionException error = assertThrows(
-                CompletionException.class,
-                () -> service.unsubscribe(USER_ID, FILTER_ID).toCompletableFuture().join()
+        assertThrows(
+                FilterNotFoundException.class,
+                () -> service.unsubscribe(USER_ID, FILTER_ID)
         );
 
-        assertInstanceOf(FilterNotFoundException.class, error.getCause());
         verify(userFiltersRepository, never()).unsubscribe(anyLong(), anyLong());
         verify(outboxRepository, never()).insert(any());
     }
@@ -277,12 +262,11 @@ class ImpulseServiceTest {
         when(filtersRepository.findFilterById(FILTER_ID)).thenReturn(Optional.of(entity(FILTER_ID)));
         when(userFiltersRepository.unsubscribe(USER_ID, FILTER_ID)).thenReturn(new UpdateCount(0));
 
-        CompletionException error = assertThrows(
-                CompletionException.class,
-                () -> service.unsubscribe(USER_ID, FILTER_ID).toCompletableFuture().join()
+        assertThrows(
+                UserNotFoundException.class,
+                () -> service.unsubscribe(USER_ID, FILTER_ID)
         );
 
-        assertInstanceOf(UserNotFoundException.class, error.getCause());
         verify(outboxRepository, never()).insert(any());
     }
 
@@ -294,12 +278,10 @@ class ImpulseServiceTest {
         when(filtersRepository.deleteById(FILTER_ID)).thenReturn(new UpdateCount(0));
         when(outboxRepository.insert(any())).thenReturn(200L);
 
-        CompletionException error = assertThrows(
-                CompletionException.class,
-                () -> service.unsubscribe(USER_ID, FILTER_ID).toCompletableFuture().join()
+        assertThrows(
+                FilterNotFoundException.class,
+                () -> service.unsubscribe(USER_ID, FILTER_ID)
         );
-
-        assertInstanceOf(FilterNotFoundException.class, error.getCause());
     }
 
     private List<FilterOutboxEntity> capturedOutboxEvents() {

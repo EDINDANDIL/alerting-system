@@ -14,7 +14,6 @@ import ru.tinkoff.kora.scheduling.jdk.annotation.ScheduleAtFixedRate;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Component
 public class EventScheduler {
@@ -32,32 +31,32 @@ public class EventScheduler {
 
     @ScheduleAtFixedRate(initialDelay = 50, period = 1000, unit = ChronoUnit.MILLIS)
     public void send() {
-
         List<FilterOutboxEntity> entities = repository
-                .getJdbcConnectionFactory().inTx(() -> repository.findNextBatch(10));
+                .getJdbcConnectionFactory().inTx(() -> repository.findNextBatchToProcess(10));
 
-            if (entities.isEmpty()) return;
+        if (entities == null || entities.isEmpty()) {
+            return;
+        }
 
-            entities.forEach(
-            entity ->  {
-                long id = entity.eventId();
-                try {
-                    FilterCreatedEvent event = facade.asEvent(entity);
-                    String key = entity.action() + ":" + entity.filterId();
-                    ProducerRecord<String, FilterCreatedEvent> record = new ProducerRecord<>(
-                            "filter-topic",
-                            key,
-                            event
-                    );
-                    record.headers().add("event-id", Long.toString(id).getBytes(StandardCharsets.UTF_8));
-                    publisher.send(record).orTimeout(5, TimeUnit.SECONDS).join();
-                } catch (Exception e) {
-                    log.error("Failed to send outbox record with id: {}, transaction rollback", id, e);
-                    throw new RuntimeException(e);
-                }
-            });
+        for (FilterOutboxEntity entity : entities) {
+            long id = entity.eventId();
+            try {
+                FilterCreatedEvent event = facade.asEvent(entity);
+                String key = entity.action() + ":" + entity.filterId();
+                ProducerRecord<String, FilterCreatedEvent> record = new ProducerRecord<>(
+                        "filter-topic",
+                        key,
+                        event
+                );
+                record.headers().add("event-id", Long.toString(id).getBytes(StandardCharsets.UTF_8));
+                publisher.send(record);
 
-            repository.getJdbcConnectionFactory().inTx(
-                    () -> entities.forEach(entity -> repository.deleteById(entity.eventId())));
+                repository.getJdbcConnectionFactory().inTx(() -> repository.deleteById(id));
+            } catch (Throwable t) {
+                log.error("Failed to send outbox record with id: {}", id, t);
+                String errorMessage = t.getMessage() != null ? t.getMessage() : t.toString();
+                repository.getJdbcConnectionFactory().inTx(() -> repository.updateStatus(id, "FAILED", errorMessage));
+            }
+        }
     }
 }

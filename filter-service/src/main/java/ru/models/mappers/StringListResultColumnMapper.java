@@ -15,9 +15,7 @@ public final class StringListResultColumnMapper implements JdbcResultColumnMappe
     @Override
     public List<String> apply(ResultSet row, int index) throws SQLException {
         Array array = row.getArray(index);
-        if (array == null) {
-            return List.of();
-        }
+        if (array == null) return List.of();
         String[] values = (String[]) array.getArray();
         return List.of(values);
     }

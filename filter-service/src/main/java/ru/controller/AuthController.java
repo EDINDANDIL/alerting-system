@@ -13,8 +13,7 @@ import ru.tinkoff.kora.json.common.annotation.Json;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import java.util.Date;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
+import java.util.Optional;
 
 @Component
 @HttpController
@@ -30,32 +29,31 @@ public class AuthController {
 
     @Json
     @HttpRoute(method = HttpMethod.POST, path = "/api/auth/register")
-    public CompletionStage<HttpResponseEntity<Response.AuthResponse>> register(@Json Request.AuthRequest request) {
-        return userService.register(request.email(), request.password())
-        .thenApply(_ ->
-                HttpResponseEntity.of(201, new Response.AuthResponse("Ok"))
-        )
-        .exceptionally(_ ->
-                HttpResponseEntity.of(400, new Response.AuthResponse("User already exists or invalid data"))
-        );
+    public HttpResponseEntity<Response.AuthResponse> register(@Json Request.AuthRequest request) {
+        try {
+            userService.register(request.email(), request.password());
+            return HttpResponseEntity.of(201, new Response.AuthResponse("Ok"));
+        } catch (Exception e) {
+            return HttpResponseEntity.of(400, new Response.AuthResponse("User already exists or invalid data"));
+        }
     }
 
     @Json
     @HttpRoute(method = HttpMethod.POST, path = "/api/auth/login")
-    public CompletionStage<HttpResponseEntity<Response.AuthResponse>> login(@Json Request.AuthRequest request) {
-        return userService.findByEmail(request.email())
-            .thenCompose(userOpt -> {
-                if (userOpt.isEmpty()) return CompletableFuture.completedStage(HttpResponseEntity.of(401, new Response.AuthResponse(null)));
-                UserEntity user = userOpt.get();
-            return userService.checkPassword(request.password(), user.passwordHash())
-                    .thenApply(matched -> {
-                        if (!matched) return HttpResponseEntity.of(401, new Response.AuthResponse("Wrong password"));
-                        String token = JWT.create()
-                                .withClaim("userId", user.id())
-                                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME_MS))
-                                .sign(Algorithm.HMAC256(JWT_SECRET));
-                        return HttpResponseEntity.of(200, new Response.AuthResponse(token));
-                    });
-        });
+    public HttpResponseEntity<Response.AuthResponse> login(@Json Request.AuthRequest request) {
+        Optional<UserEntity> userOpt = userService.findByEmail(request.email());
+        if (userOpt.isEmpty()) {
+            return HttpResponseEntity.of(401, new Response.AuthResponse(null));
+        }
+        UserEntity user = userOpt.get();
+        boolean matched = userService.checkPassword(request.password(), user.passwordHash());
+        if (!matched) {
+            return HttpResponseEntity.of(401, new Response.AuthResponse("Wrong password"));
+        }
+        String token = JWT.create()
+                .withClaim("userId", user.id())
+                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME_MS))
+                .sign(Algorithm.HMAC256(JWT_SECRET));
+        return HttpResponseEntity.of(200, new Response.AuthResponse(token));
     }
 }

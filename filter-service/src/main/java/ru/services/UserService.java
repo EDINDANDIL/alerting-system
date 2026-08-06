@@ -5,32 +5,26 @@ import ru.persistence.repository.UserRepository;
 import ru.tinkoff.kora.common.Component;
 import org.mindrot.jbcrypt.BCrypt;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 @Component
 public class UserService {
 
     private final UserRepository userRepository;
-    private final DBExecutor executor;
 
-    public UserService(UserRepository userRepository, DBExecutor executor) {
+    public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.executor = executor;
     }
 
-    public CompletionStage<UserEntity> register(String email, String password) {
-        return CompletableFuture.supplyAsync(() -> {
-            String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
-            return userRepository.insert(email, passwordHash);
-        }, executor.executor());
+    public UserEntity register(String email, String password) {
+        String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
+        return userRepository.insert(email, passwordHash);
     }
 
-    public CompletionStage<Optional<UserEntity>> findByEmail(String email) {
-        return CompletableFuture.supplyAsync(() -> userRepository.findByEmail(email), executor.executor());
+    public Optional<UserEntity> findByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 
-    public CompletionStage<Boolean> checkPassword(String plainPassword, String hashedPassword) {
-        return CompletableFuture.supplyAsync(() -> BCrypt.checkpw(plainPassword, hashedPassword), executor.executor());
+    public boolean checkPassword(String plainPassword, String hashedPassword) {
+        return BCrypt.checkpw(plainPassword, hashedPassword);
     }
 }
